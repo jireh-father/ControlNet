@@ -21,9 +21,10 @@ def main(args):
 
     # Misc
     dataset = InpaintDataset(args.data_root, args.label_path)
-    dataloader = DataLoader(dataset, num_workers=0, batch_size=args.batch_size, shuffle=True)
+    dataloader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     logger = ImageLogger(batch_frequency=args.logger_freq)
-    trainer = pl.Trainer(gpus=1, precision=32, callbacks=[logger])
+    trainer = pl.Trainer(gpus=1, precision=args.precision, callbacks=[logger], max_epochs=args.max_epochs,
+                         min_epochs=args.max_epochs)
 
     # Train!
     trainer.fit(model, dataloader)
@@ -37,6 +38,10 @@ if __name__ == '__main__':
     parser.add_argument('--label_path', type=str, help='Path to the label file')
     # batch_size
     parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--precision', type=int, default=16)
+    # max_epochs
+    parser.add_argument('--max_epochs', type=int, default=10)
     # logger_freq
     parser.add_argument('--logger_freq', type=int, default=300)
     # learning_rate
