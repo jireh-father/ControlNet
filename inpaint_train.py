@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from inpaint_dataset import InpaintDataset
 from cldm.logger import ImageLogger
 from cldm.model import create_model, load_state_dict
-from lightning.pytorch.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 import argparse
 
 
