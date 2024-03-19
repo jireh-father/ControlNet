@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from inpaint_dataset import InpaintDataset
 from cldm.logger import ImageLogger
 from cldm.model import create_model, load_state_dict
+from lightning.pytorch.callbacks import ModelCheckpoint
 import argparse
 
 
@@ -19,11 +20,20 @@ def main(args):
     model.sd_locked = sd_locked
     model.only_mid_control = only_mid_control
 
+    checkpoint_callback = ModelCheckpoint(
+        save_top_k=args.save_top_k,
+        monitor="global_step",
+        mode="max",
+        dirpath=args.default_root_dir,
+        filename="model-{epoch:02d}-{global_step}",
+    )
+
     # Misc
     dataset = InpaintDataset(args.data_root, args.label_path)
     dataloader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     logger = ImageLogger(batch_frequency=args.logger_freq)
-    trainer = pl.Trainer(accelerator="gpu", gpus=1, precision=args.precision, callbacks=[logger], max_epochs=args.max_epochs,
+    trainer = pl.Trainer(accelerator="gpu", gpus=1, precision=args.precision, callbacks=[logger, checkpoint_callback],
+                         max_epochs=args.max_epochs,
                          min_epochs=args.max_epochs, default_root_dir=args.default_root_dir)
 
     # Train!
@@ -39,6 +49,8 @@ if __name__ == '__main__':
     # batch_size
     parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--num_workers', type=int, default=4)
+    # save_top_k
+    parser.add_argument('--save_top_k', type=int, default=10)
     parser.add_argument('--precision', type=int, default=16)
     # max_epochs
     parser.add_argument('--max_epochs', type=int, default=10)
