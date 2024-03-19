@@ -23,8 +23,8 @@ def main(args):
     dataset = InpaintDataset(args.data_root, args.label_path)
     dataloader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     logger = ImageLogger(batch_frequency=args.logger_freq)
-    trainer = pl.Trainer(gpus=1, precision=args.precision, callbacks=[logger], max_epochs=args.max_epochs,
-                         min_epochs=args.max_epochs)
+    trainer = pl.Trainer(accelerator="gpu", gpus=1, precision=args.precision, callbacks=[logger], max_epochs=args.max_epochs,
+                         min_epochs=args.max_epochs, default_root_dir=args.default_root_dir)
 
     # Train!
     trainer.fit(model, dataloader)
@@ -39,12 +39,14 @@ if __name__ == '__main__':
     # batch_size
     parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--num_workers', type=int, default=4)
-    parser.add_argument('--precision', type=int, default=16)
+    parser.add_argument('--precision', type=str, default="16-true")
     # max_epochs
     parser.add_argument('--max_epochs', type=int, default=10)
     # logger_freq
     parser.add_argument('--logger_freq', type=int, default=300)
     # learning_rate
     parser.add_argument('--learning_rate', type=float, default=1e-5)
+    # default_root_dir
+    parser.add_argument('--default_root_dir', type=str, default='./logs')
     args = parser.parse_args()
     main(args)
