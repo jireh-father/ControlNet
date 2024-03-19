@@ -27,6 +27,8 @@ class InpaintDataset(Dataset):
 
         source = cv2.imread(os.path.join(self.data_root, source_filename))
         target = cv2.imread(os.path.join(self.data_root, target_filename))
+        print("source shape: ", source.shape)
+        print("target shape: ", target.shape)
 
         # Do not forget that OpenCV read images in BGR order.
         source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
