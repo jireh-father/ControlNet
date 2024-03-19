@@ -39,7 +39,7 @@ if __name__ == '__main__':
     # batch_size
     parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--num_workers', type=int, default=4)
-    parser.add_argument('--precision', type=str, default="16-true")
+    parser.add_argument('--precision', type=int, default=16)
     # max_epochs
     parser.add_argument('--max_epochs', type=int, default=10)
     # logger_freq
