@@ -28,6 +28,9 @@ class InpaintDataset(Dataset):
         source = cv2.imread(os.path.join(self.data_root, source_filename))
         target = cv2.imread(os.path.join(self.data_root, target_filename))
 
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
+
         # resize to 512x512 keeping the aspect ratio with padding aligned to the center
         h, w, _ = source.shape
         if h > w:
@@ -41,10 +44,6 @@ class InpaintDataset(Dataset):
 
         source = cv2.resize(source, (512, 512))
         target = cv2.resize(target, (512, 512))
-
-        # Do not forget that OpenCV read images in BGR order.
-        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
-        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
 
         # Normalize source images to [0, 1].
         source = source.astype(np.float32) / 255.0

@@ -1,3 +1,5 @@
+import os
+
 from share import *
 
 import pytorch_lightning as pl
@@ -25,7 +27,7 @@ def main(args):
         monitor="global_step",
         mode="max",
         dirpath=args.default_root_dir,
-        filename="model-{epoch:02d}-{global_step}",
+        filename=os.path.basename(args.default_root_dir) + "-model-{epoch:02d}-{global_step}",
     )
 
     # Misc
@@ -34,7 +36,10 @@ def main(args):
     logger = ImageLogger(batch_frequency=args.logger_freq)
     trainer = pl.Trainer(accelerator="gpu", gpus=1, precision=args.precision, callbacks=[logger, checkpoint_callback],
                          max_epochs=args.max_epochs,
-                         min_epochs=args.max_epochs, default_root_dir=args.default_root_dir)
+                         min_epochs=args.max_epochs, default_root_dir=args.default_root_dir,
+                         accumulate_grad_batches=args.accumulate_grad_batches,
+                         auto_lr_find=args.auto_lr_find,
+                         )
 
     # Train!
     trainer.fit(model, dataloader)
@@ -60,5 +65,8 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=1e-5)
     # default_root_dir
     parser.add_argument('--default_root_dir', type=str, default='./logs')
+    parser.add_argument('--accumulate_grad_batches', type=int, default=1)
+    #auto_lr_find
+    parser.add_argument('--auto_lr_find', action='store_true', default=False)
     args = parser.parse_args()
     main(args)
