@@ -56,3 +56,34 @@ class InpaintDataset(Dataset):
         inpaint_source[source > 0.5] = -1.0
 
         return dict(jpg=target, txt=prompt, hint=inpaint_source)
+
+
+if __name__ == '__main__':
+    dataset = InpaintDataset(data_root='E:/dataset/fill50k',
+                             label_path='E:\dataset/fill50k/prompt.json')
+    print(len(dataset))
+    import torch
+
+    dataset_loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
+    for batch in dataset_loader:
+        print(batch['jpg'].shape, batch['txt'], batch['hint'].shape)
+        # convert to pil image
+        from PIL import Image
+        import matplotlib.pyplot as plt
+
+        # unnormalize to 0~255
+        def to_pil(x):
+            # x = x.squeeze(0).permute(1, 2, 0).cpu().numpy()
+            x = x.squeeze(0).cpu().numpy()
+            x = (x + 1) / 2 * 255
+            x = x.clip(0, 255).astype(np.uint8)
+            return Image.fromarray(x)
+        print(batch['jpg'].max(), batch['jpg'].min())
+        img = to_pil(batch['jpg'][0])
+        plt.imshow(img)
+        plt.show()
+        img = to_pil(batch['hint'][0])
+        plt.imshow(img)
+        plt.show()
+
+        break

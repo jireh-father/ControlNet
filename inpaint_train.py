@@ -43,9 +43,9 @@ def main(args):
                          )
 
     # Train!
-    # trainer.fit(model, dataloader)
+    trainer.fit(model, dataloader)
 
-    model.save_weights(os.path.join(args.default_root_dir, "final.ckpt"))
+    # model.save_weights(os.path.join(args.default_root_dir, "final.ckpt"))
 
 
 if __name__ == '__main__':
