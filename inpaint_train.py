@@ -24,6 +24,7 @@ def main(args):
 
     checkpoint_callback = ModelCheckpoint(
         save_top_k=args.save_top_k,
+        save_weights_only=True,
         monitor="global_step",
         mode="max",
         dirpath=args.default_root_dir,
