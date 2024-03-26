@@ -58,8 +58,7 @@ class InpaintDataset(Dataset):
             source = cv2.resize(source, (512, 512))
             target = cv2.resize(target, (512, 512))
 
-        print("width: ", source.shape[1], target.shape[1])
-        print("height: ", source.shape[0], target.shape[0])
+        print("width: ", source.shape[1], target.shape[1], "height: ", source.shape[0], target.shape[0])
 
 
         # if h > w:
