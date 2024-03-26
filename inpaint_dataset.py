@@ -35,14 +35,29 @@ class InpaintDataset(Dataset):
 
         # resize to min side 512 and other side bigger than 512 keeping aspect ratio
         if h > w:
-            source = cv2.resize(source, (512, int(h / w * 512)))
-            target = cv2.resize(target, (512, int(h / w * 512)))
+            target_w = 512
+            target_h = 768
+            tmp_h = int(h / w * 512)
+            source = cv2.resize(source, (512, tmp_h))
+            target = cv2.resize(target, (512, tmp_h))
+            # pad h
+            pad = (target_h - tmp_h) // 2
+            source = cv2.copyMakeBorder(source, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+            target = cv2.copyMakeBorder(target, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(255, 255, 255))
         elif h < w:
-            source = cv2.resize(source, (int(w / h * 512), 512))
-            target = cv2.resize(target, (int(w / h * 512), 512))
+            target_w = 768
+            target_h = 512
+            tmp_w = int(w / h * 512)
+            source = cv2.resize(source, (tmp_w, 512))
+            target = cv2.resize(target, (tmp_w, 512))
+            # pad w
+            pad = (target_w - tmp_w) // 2
+            source = cv2.copyMakeBorder(source, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+            target = cv2.copyMakeBorder(target, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(255, 255, 255))
         else:
             source = cv2.resize(source, (512, 512))
             target = cv2.resize(target, (512, 512))
+
 
         # if h > w:
         #     pad = (h - w) // 2
