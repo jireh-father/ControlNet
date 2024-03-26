@@ -9,7 +9,8 @@ def main(args):
     model.load_state_dict(load_state_dict(args.model_path, location='cpu'))
     os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
     torch.save(model.state_dict(), args.output_path)
-
+    if args.remove_original:
+        os.remove(args.model_path)
     print(f'Weights saved to [{args.output_path}]')
 
 
@@ -18,4 +19,5 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', type=str, default='./models/control_sd15_ini.ckpt')
     parser.add_argument('--output_path', type=str, default='./models/control_sd15_ini_weights.ckpt')
     parser.add_argument('--model_config', type=str, default='./models/cldm_v15.yaml')
+    parser.add_argument('--remove_original', default=False, action='store_true')
     main(parser.parse_args())
