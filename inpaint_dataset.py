@@ -8,9 +8,11 @@ import copy
 
 
 class InpaintDataset(Dataset):
-    def __init__(self, data_root, label_path):
+    def __init__(self, data_root, label_path, use_multi_aspect_ratio=False, target_size=512):
         self.data = []
         self.data_root = data_root
+        self.use_multi_aspect_ratio = use_multi_aspect_ratio
+        self.target_size = target_size
         with open(label_path, 'rt') as f:
             for line in f:
                 self.data.append(json.loads(line))
@@ -33,48 +35,45 @@ class InpaintDataset(Dataset):
 
         h, w, _ = source.shape
 
-        # resize to min side 512 and other side bigger than 512 keeping aspect ratio
-        if h > w:
-            target_w = 512
-            target_h = 768
-            tmp_h = int(h / w * 512)
-            source = cv2.resize(source, (512, tmp_h))
-            target = cv2.resize(target, (512, tmp_h))
-            # pad h
-            pad = (target_h - tmp_h) // 2
-            source = cv2.copyMakeBorder(source, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
-                                        cv2.BORDER_CONSTANT, value=(0, 0, 0))
-            target = cv2.copyMakeBorder(target, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
-                                        cv2.BORDER_CONSTANT, value=(255, 255, 255))
-        elif h < w:
-            target_w = 768
-            target_h = 512
-            tmp_w = int(w / h * 512)
-            source = cv2.resize(source, (tmp_w, 512))
-            target = cv2.resize(target, (tmp_w, 512))
-            # pad w
-            pad = (target_w - tmp_w) // 2
-            source = cv2.copyMakeBorder(source, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
-                                        cv2.BORDER_CONSTANT, value=(0, 0, 0))
-            target = cv2.copyMakeBorder(target, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
-                                        cv2.BORDER_CONSTANT, value=(255, 255, 255))
+        if not self.use_multi_aspect_ratio:
+            if h > w:
+                pad = (h - w) // 2
+                source = cv2.copyMakeBorder(source, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+                target = cv2.copyMakeBorder(target, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+            else:
+                pad = (w - h) // 2
+                source = cv2.copyMakeBorder(source, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+                target = cv2.copyMakeBorder(target, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+
+            source = cv2.resize(source, (self.target_size, self.target_size))
+            target = cv2.resize(target, (self.target_size, self.target_size))
         else:
-            source = cv2.resize(source, (512, 512))
-            target = cv2.resize(target, (512, 512))
-
-        print("width: ", source.shape[1], target.shape[1], "height: ", source.shape[0], target.shape[0])
-
-        # if h > w:
-        #     pad = (h - w) // 2
-        #     source = cv2.copyMakeBorder(source, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(0, 0, 0))
-        #     target = cv2.copyMakeBorder(target, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(255, 255, 255))
-        # else:
-        #     pad = (w - h) // 2
-        #     source = cv2.copyMakeBorder(source, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
-        #     target = cv2.copyMakeBorder(target, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(255, 255, 255))
-        #
-        # source = cv2.resize(source, (512, 512))
-        # target = cv2.resize(target, (512, 512))
+            # resize to min side 512 and other side bigger than 512 keeping aspect ratio
+            if h > w:
+                target_h = self.target_size + self.target_size // 2
+                tmp_h = int(h / w * self.target_size)
+                source = cv2.resize(source, (self.target_size, tmp_h))
+                target = cv2.resize(target, (self.target_size, tmp_h))
+                # pad h
+                pad = (target_h - tmp_h) // 2
+                source = cv2.copyMakeBorder(source, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
+                                            cv2.BORDER_CONSTANT, value=(0, 0, 0))
+                target = cv2.copyMakeBorder(target, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
+                                            cv2.BORDER_CONSTANT, value=(255, 255, 255))
+            elif h < w:
+                target_w = self.target_size + self.target_size // 2
+                tmp_w = int(w / h * self.target_size)
+                source = cv2.resize(source, (tmp_w, self.target_size))
+                target = cv2.resize(target, (tmp_w, self.target_size))
+                # pad w
+                pad = (target_w - tmp_w) // 2
+                source = cv2.copyMakeBorder(source, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
+                                            cv2.BORDER_CONSTANT, value=(0, 0, 0))
+                target = cv2.copyMakeBorder(target, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
+                                            cv2.BORDER_CONSTANT, value=(255, 255, 255))
+            else:
+                source = cv2.resize(source, (self.target_size, self.target_size))
+                target = cv2.resize(target, (self.target_size, self.target_size))
 
         # Normalize source images to [0, 1].
         source = source.astype(np.float32) / 255.0

@@ -32,7 +32,8 @@ def main(args):
     )
 
     # Misc
-    dataset = InpaintDataset(args.data_root, args.label_path)
+    dataset = InpaintDataset(args.data_root, args.label_path, use_multi_aspect_ratio=args.use_multi_aspect_ratio,
+                             target_size=args.input_target_size)
     dataloader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     logger = ImageLogger(batch_frequency=args.logger_freq)
     trainer = pl.Trainer(accelerator="gpu", gpus=1, precision=args.precision, callbacks=[logger, checkpoint_callback],
@@ -69,7 +70,13 @@ if __name__ == '__main__':
     # default_root_dir
     parser.add_argument('--default_root_dir', type=str, default='./logs')
     parser.add_argument('--accumulate_grad_batches', type=int, default=1)
-    #auto_lr_find
+    # auto_lr_find
     parser.add_argument('--auto_lr_find', action='store_true', default=False)
+
+    # input_target_size
+    parser.add_argument('--input_target_size', type=int, default=512)
+    # use_multi_aspect_ratio
+    parser.add_argument('--use_multi_aspect_ratio', action='store_true', default=False)
+
     args = parser.parse_args()
     main(args)
