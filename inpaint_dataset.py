@@ -54,7 +54,6 @@ class InpaintDataset(Dataset):
                 elif tmp_h < target_h:
                     # pad h
                     pad = (target_h - tmp_h) // 2
-                    print("source shape", source.shape, "pad", pad, "target_h", target_h, "tmp_h", tmp_h)
                     source = cv2.copyMakeBorder(source, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
                                                 cv2.BORDER_CONSTANT, value=(0, 0, 0))
                     target = cv2.copyMakeBorder(target, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
