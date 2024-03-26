@@ -44,7 +44,6 @@ def main(args):
 
     # Train!
     trainer.fit(model, dataloader)
-    trainer.save_checkpoint("example.ckpt")
 
     # model.save_weights(os.path.join(args.default_root_dir, "final.ckpt"))
 
