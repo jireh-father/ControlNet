@@ -31,19 +31,30 @@ class InpaintDataset(Dataset):
         source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
         target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
 
-        # resize to 512x512 keeping the aspect ratio with padding aligned to the center
         h, w, _ = source.shape
-        if h > w:
-            pad = (h - w) // 2
-            source = cv2.copyMakeBorder(source, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(0, 0, 0))
-            target = cv2.copyMakeBorder(target, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(255, 255, 255))
-        else:
-            pad = (w - h) // 2
-            source = cv2.copyMakeBorder(source, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
-            target = cv2.copyMakeBorder(target, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(255, 255, 255))
 
-        source = cv2.resize(source, (512, 512))
-        target = cv2.resize(target, (512, 512))
+        # resize to min side 512 and other side bigger than 512 keeping aspect ratio
+        if h > w:
+            source = cv2.resize(source, (512, int(h / w * 512)))
+            target = cv2.resize(target, (512, int(h / w * 512)))
+        elif h < w:
+            source = cv2.resize(source, (int(w / h * 512), 512))
+            target = cv2.resize(target, (int(w / h * 512), 512))
+        else:
+            source = cv2.resize(source, (512, 512))
+            target = cv2.resize(target, (512, 512))
+
+        # if h > w:
+        #     pad = (h - w) // 2
+        #     source = cv2.copyMakeBorder(source, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+        #     target = cv2.copyMakeBorder(target, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+        # else:
+        #     pad = (w - h) // 2
+        #     source = cv2.copyMakeBorder(source, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+        #     target = cv2.copyMakeBorder(target, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+        #
+        # source = cv2.resize(source, (512, 512))
+        # target = cv2.resize(target, (512, 512))
 
         # Normalize source images to [0, 1].
         source = source.astype(np.float32) / 255.0
