@@ -42,8 +42,10 @@ class InpaintDataset(Dataset):
             target = cv2.resize(target, (512, tmp_h))
             # pad h
             pad = (target_h - tmp_h) // 2
-            source = cv2.copyMakeBorder(source, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
-            target = cv2.copyMakeBorder(target, pad, pad, 0, 0, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+            source = cv2.copyMakeBorder(source, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
+                                        cv2.BORDER_CONSTANT, value=(0, 0, 0))
+            target = cv2.copyMakeBorder(target, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
+                                        cv2.BORDER_CONSTANT, value=(255, 255, 255))
         elif h < w:
             target_w = 768
             target_h = 512
@@ -52,14 +54,15 @@ class InpaintDataset(Dataset):
             target = cv2.resize(target, (tmp_w, 512))
             # pad w
             pad = (target_w - tmp_w) // 2
-            source = cv2.copyMakeBorder(source, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(0, 0, 0))
-            target = cv2.copyMakeBorder(target, 0, 0, pad, pad, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+            source = cv2.copyMakeBorder(source, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
+                                        cv2.BORDER_CONSTANT, value=(0, 0, 0))
+            target = cv2.copyMakeBorder(target, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
+                                        cv2.BORDER_CONSTANT, value=(255, 255, 255))
         else:
             source = cv2.resize(source, (512, 512))
             target = cv2.resize(target, (512, 512))
 
         print("width: ", source.shape[1], target.shape[1], "height: ", source.shape[0], target.shape[0])
-
 
         # if h > w:
         #     pad = (h - w) // 2
@@ -99,6 +102,7 @@ if __name__ == '__main__':
         from PIL import Image
         import matplotlib.pyplot as plt
 
+
         # unnormalize to 0~255
         def to_pil(x):
             # x = x.squeeze(0).permute(1, 2, 0).cpu().numpy()
@@ -106,6 +110,8 @@ if __name__ == '__main__':
             x = (x + 1) / 2 * 255
             x = x.clip(0, 255).astype(np.uint8)
             return Image.fromarray(x)
+
+
         print(batch['jpg'].max(), batch['jpg'].min())
         img = to_pil(batch['jpg'][0])
         plt.imshow(img)
