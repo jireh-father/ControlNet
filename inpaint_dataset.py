@@ -86,6 +86,7 @@ class InpaintDataset(Dataset):
             try:
                 source, target = self.resize_image(source, target)
             except Exception as e:
+                print("error file path", source_filename, target_filename)
                 traceback.print_exc()
                 idx = random.randint(0, len(self.data) - 1)
                 continue
