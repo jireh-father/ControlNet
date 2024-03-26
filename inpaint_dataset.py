@@ -1,4 +1,7 @@
 import json
+import random
+import traceback
+
 import cv2
 import numpy as np
 
@@ -20,19 +23,7 @@ class InpaintDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, idx):
-        item = self.data[idx]
-
-        source_filename = item['source']
-        target_filename = item['target']
-        prompt = item['prompt']
-
-        source = cv2.imread(os.path.join(self.data_root, source_filename))
-        target = cv2.imread(os.path.join(self.data_root, target_filename))
-
-        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
-        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
-
+    def resize_image(self, source, target):
         h, w, _ = source.shape
 
         if not self.use_multi_aspect_ratio:
@@ -76,17 +67,40 @@ class InpaintDataset(Dataset):
                 source = cv2.resize(source, (self.target_size, self.target_size))
                 target = cv2.resize(target, (self.target_size, self.target_size))
 
-        # Normalize source images to [0, 1].
-        source = source.astype(np.float32) / 255.0
+        return source, target
 
-        # Normalize target images to [-1, 1].
-        target = (target.astype(np.float32) / 127.5) - 1.0
+    def __getitem__(self, idx):
+        while True:
+            item = self.data[idx]
 
-        # deep copy target
-        inpaint_source = copy.deepcopy(target)
-        inpaint_source[source > 0.5] = -1.0
+            source_filename = item['source']
+            target_filename = item['target']
+            prompt = item['prompt']
 
-        return dict(jpg=target, txt=prompt, hint=inpaint_source)
+            source = cv2.imread(os.path.join(self.data_root, source_filename))
+            target = cv2.imread(os.path.join(self.data_root, target_filename))
+
+            source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+            target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
+
+            try:
+                source, target = self.resize_image(source, target)
+            except Exception as e:
+                traceback.print_exc()
+                idx = random.randint(0, len(self.data) - 1)
+                continue
+
+            # Normalize source images to [0, 1].
+            source = source.astype(np.float32) / 255.0
+
+            # Normalize target images to [-1, 1].
+            target = (target.astype(np.float32) / 127.5) - 1.0
+
+            # deep copy target
+            inpaint_source = copy.deepcopy(target)
+            inpaint_source[source > 0.5] = -1.0
+
+            return dict(jpg=target, txt=prompt, hint=inpaint_source)
 
 
 if __name__ == '__main__':
