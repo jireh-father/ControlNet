@@ -45,24 +45,36 @@ class InpaintDataset(Dataset):
                 tmp_h = int(h / w * self.target_size)
                 source = cv2.resize(source, (self.target_size, tmp_h))
                 target = cv2.resize(target, (self.target_size, tmp_h))
-                # pad h
-                pad = (target_h - tmp_h) // 2
-                print("source shape", source.shape, "pad", pad, "target_h", target_h, "tmp_h", tmp_h)
-                source = cv2.copyMakeBorder(source, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
-                                            cv2.BORDER_CONSTANT, value=(0, 0, 0))
-                target = cv2.copyMakeBorder(target, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
-                                            cv2.BORDER_CONSTANT, value=(255, 255, 255))
+
+                if tmp_h > target_h:
+                    #crop
+                    source = source[tmp_h // 2 - target_h // 2:tmp_h // 2 + target_h // 2, :]
+                    target = target[tmp_h // 2 - target_h // 2:tmp_h // 2 + target_h // 2, :]
+
+                elif tmp_h < target_h:
+                    # pad h
+                    pad = (target_h - tmp_h) // 2
+                    print("source shape", source.shape, "pad", pad, "target_h", target_h, "tmp_h", tmp_h)
+                    source = cv2.copyMakeBorder(source, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
+                                                cv2.BORDER_CONSTANT, value=(0, 0, 0))
+                    target = cv2.copyMakeBorder(target, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
+                                                cv2.BORDER_CONSTANT, value=(255, 255, 255))
             elif h < w:
                 target_w = self.target_size + self.target_size // 2
                 tmp_w = int(w / h * self.target_size)
                 source = cv2.resize(source, (tmp_w, self.target_size))
                 target = cv2.resize(target, (tmp_w, self.target_size))
-                # pad w
-                pad = (target_w - tmp_w) // 2
-                source = cv2.copyMakeBorder(source, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
-                                            cv2.BORDER_CONSTANT, value=(0, 0, 0))
-                target = cv2.copyMakeBorder(target, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
-                                            cv2.BORDER_CONSTANT, value=(255, 255, 255))
+                if tmp_w > target_w:
+                    # crop
+                    source = source[:, tmp_w // 2 - target_w // 2:tmp_w // 2 + target_w // 2]
+                    target = target[:, tmp_w // 2 - target_w // 2:tmp_w // 2 + target_w // 2]
+                elif tmp_w < target_w:
+                    # pad w
+                    pad = (target_w - tmp_w) // 2
+                    source = cv2.copyMakeBorder(source, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
+                                                cv2.BORDER_CONSTANT, value=(0, 0, 0))
+                    target = cv2.copyMakeBorder(target, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
+                                                cv2.BORDER_CONSTANT, value=(255, 255, 255))
             else:
                 source = cv2.resize(source, (self.target_size, self.target_size))
                 target = cv2.resize(target, (self.target_size, self.target_size))
