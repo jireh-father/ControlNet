@@ -137,11 +137,6 @@ class InpaintDataset(Dataset):
 
             target = cv2.imread(os.path.join(self.data_root, target_filename))
 
-            if self.use_transform:
-                transformed = self.transform(image=target, mask=source)
-                target = transformed['image']
-                source = transformed['mask']
-
             source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
             target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
 
@@ -152,6 +147,11 @@ class InpaintDataset(Dataset):
                 traceback.print_exc()
                 idx = random.randint(0, len(self.data) - 1)
                 continue
+
+            if self.use_transform:
+                transformed = self.transform(image=target, mask=source)
+                target = transformed['image']
+                source = transformed['mask']
 
             # Normalize source images to [0, 1].
             source = source.astype(np.float32) / 255.0
