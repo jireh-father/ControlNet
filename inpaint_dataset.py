@@ -149,9 +149,7 @@ class InpaintDataset(Dataset):
                 continue
 
             if self.use_transform:
-                transformed = self.transform(image=target, mask=source)
-                target = transformed['image']
-                source = transformed['mask']
+                target = self.transform(image=target)['image']
 
             # Normalize source images to [0, 1].
             source = source.astype(np.float32) / 255.0
