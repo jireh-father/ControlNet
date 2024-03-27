@@ -8,10 +8,10 @@ import numpy as np
 from torch.utils.data import Dataset
 import os
 import copy
-
+import albumentations as albu
 
 class InpaintDataset(Dataset):
-    def __init__(self, data_root, label_path, use_multi_aspect_ratio=False, target_size=512, divisible_by=None):
+    def __init__(self, data_root, label_path, use_multi_aspect_ratio=False, target_size=512, divisible_by=None, use_transform=False):
         self.data = []
         self.data_root = data_root
         self.use_multi_aspect_ratio = use_multi_aspect_ratio
@@ -20,6 +20,14 @@ class InpaintDataset(Dataset):
         with open(label_path, 'rt') as f:
             for line in f:
                 self.data.append(json.loads(line))
+
+        self.transform = albu.Compose([
+            # albu.HorizontalFlip(p=0.5),
+            # albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
+            albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
+            albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
+        ])
+        self.use_transform = use_transform
 
     def __len__(self):
         return len(self.data)
@@ -119,6 +127,8 @@ class InpaintDataset(Dataset):
             prompt = item['prompt']
 
             source = cv2.imread(os.path.join(self.data_root, source_filename))
+
+
             h, w, _ = source.shape
             if self.target_size > h or self.target_size > w:
                 idx = random.randint(0, len(self.data) - 1)
@@ -126,6 +136,11 @@ class InpaintDataset(Dataset):
                 continue
 
             target = cv2.imread(os.path.join(self.data_root, target_filename))
+
+            if self.use_transform:
+                transformed = self.transform(image=target, mask=source)
+                target = transformed['image']
+                source = transformed['mask']
 
             source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
             target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
