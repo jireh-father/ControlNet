@@ -33,7 +33,7 @@ def main(args):
 
     # Misc
     dataset = InpaintDataset(args.data_root, args.label_path, use_multi_aspect_ratio=args.use_multi_aspect_ratio,
-                             target_size=args.input_target_size)
+                             target_size=args.input_target_size, divisible_by=args.divisible_by)
     dataloader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     logger = ImageLogger(batch_frequency=args.logger_freq)
     trainer = pl.Trainer(accelerator="gpu", gpus=1, precision=args.precision, callbacks=[logger, checkpoint_callback],
@@ -77,6 +77,8 @@ if __name__ == '__main__':
     parser.add_argument('--input_target_size', type=int, default=512)
     # use_multi_aspect_ratio
     parser.add_argument('--use_multi_aspect_ratio', action='store_true', default=False)
+
+    parser.add_argument('--divisible_by', type=int, default=None)
 
     args = parser.parse_args()
     main(args)

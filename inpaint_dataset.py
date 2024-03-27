@@ -11,11 +11,12 @@ import copy
 
 
 class InpaintDataset(Dataset):
-    def __init__(self, data_root, label_path, use_multi_aspect_ratio=False, target_size=512):
+    def __init__(self, data_root, label_path, use_multi_aspect_ratio=False, target_size=512, divisible_by=None):
         self.data = []
         self.data_root = data_root
         self.use_multi_aspect_ratio = use_multi_aspect_ratio
         self.target_size = target_size
+        self.divisible_by = divisible_by
         with open(label_path, 'rt') as f:
             for line in f:
                 self.data.append(json.loads(line))
@@ -39,44 +40,73 @@ class InpaintDataset(Dataset):
             source = cv2.resize(source, (self.target_size, self.target_size))
             target = cv2.resize(target, (self.target_size, self.target_size))
         else:
-            # resize to min side 512 and other side bigger than 512 keeping aspect ratio
-            if h > w:
-                target_h = self.target_size + self.target_size // 2
-                tmp_h = int(h / w * self.target_size)
-                source = cv2.resize(source, (self.target_size, tmp_h))
-                target = cv2.resize(target, (self.target_size, tmp_h))
+            if self.divisible_by:
+                if w > h:
+                    target_h = self.target_size
+                    target_w = int(target_h / h * w)
+                    source = cv2.resize(source, (target_w, target_h))
+                    target = cv2.resize(target, (target_w, target_h))
+                    if target_w % self.divisible_by != 0:
+                        # crop remaining both side
+                        left_remaining = target_w % self.divisible_by // 2
+                        right_remaining = target_w % self.divisible_by - left_remaining
 
-                if tmp_h > target_h:
-                    #crop
-                    source = source[tmp_h // 2 - target_h // 2:tmp_h // 2 + target_h // 2, :]
-                    target = target[tmp_h // 2 - target_h // 2:tmp_h // 2 + target_h // 2, :]
+                        source = source[:, left_remaining:-right_remaining]
+                        target = target[:, left_remaining:-right_remaining]
+                elif w < h:
+                    target_w = self.target_size
+                    target_h = int(target_w / w * h)
+                    source = cv2.resize(source, (target_w, target_h))
+                    target = cv2.resize(target, (target_w, target_h))
+                    if target_h % self.divisible_by != 0:
+                        # crop remaining both side
+                        top_remaining = target_h % self.divisible_by // 2
+                        bottom_remaining = target_h % self.divisible_by - top_remaining
 
-                elif tmp_h < target_h:
-                    # pad h
-                    pad = (target_h - tmp_h) // 2
-                    source = cv2.copyMakeBorder(source, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
-                                                cv2.BORDER_CONSTANT, value=(0, 0, 0))
-                    target = cv2.copyMakeBorder(target, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
-                                                cv2.BORDER_CONSTANT, value=(255, 255, 255))
-            elif h < w:
-                target_w = self.target_size + self.target_size // 2
-                tmp_w = int(w / h * self.target_size)
-                source = cv2.resize(source, (tmp_w, self.target_size))
-                target = cv2.resize(target, (tmp_w, self.target_size))
-                if tmp_w > target_w:
-                    # crop
-                    source = source[:, tmp_w // 2 - target_w // 2:tmp_w // 2 + target_w // 2]
-                    target = target[:, tmp_w // 2 - target_w // 2:tmp_w // 2 + target_w // 2]
-                elif tmp_w < target_w:
-                    # pad w
-                    pad = (target_w - tmp_w) // 2
-                    source = cv2.copyMakeBorder(source, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
-                                                cv2.BORDER_CONSTANT, value=(0, 0, 0))
-                    target = cv2.copyMakeBorder(target, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
-                                                cv2.BORDER_CONSTANT, value=(255, 255, 255))
+                        source = source[top_remaining:-bottom_remaining, :]
+                        target = target[top_remaining:-bottom_remaining, :]
+                else:
+                    source = cv2.resize(source, (self.target_size, self.target_size))
+                    target = cv2.resize(target, (self.target_size, self.target_size))
             else:
-                source = cv2.resize(source, (self.target_size, self.target_size))
-                target = cv2.resize(target, (self.target_size, self.target_size))
+                # resize to min side 512 and other side bigger than 512 keeping aspect ratio
+                if h > w:
+                    target_h = self.target_size + self.target_size // 2
+                    tmp_h = int(h / w * self.target_size)
+                    source = cv2.resize(source, (self.target_size, tmp_h))
+                    target = cv2.resize(target, (self.target_size, tmp_h))
+
+                    if tmp_h > target_h:
+                        # crop
+                        source = source[tmp_h // 2 - target_h // 2:tmp_h // 2 + target_h // 2, :]
+                        target = target[tmp_h // 2 - target_h // 2:tmp_h // 2 + target_h // 2, :]
+
+                    elif tmp_h < target_h:
+                        # pad h
+                        pad = (target_h - tmp_h) // 2
+                        source = cv2.copyMakeBorder(source, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
+                                                    cv2.BORDER_CONSTANT, value=(0, 0, 0))
+                        target = cv2.copyMakeBorder(target, pad, pad if (target_h - tmp_h) % 2 == 0 else pad + 1, 0, 0,
+                                                    cv2.BORDER_CONSTANT, value=(255, 255, 255))
+                elif h < w:
+                    target_w = self.target_size + self.target_size // 2
+                    tmp_w = int(w / h * self.target_size)
+                    source = cv2.resize(source, (tmp_w, self.target_size))
+                    target = cv2.resize(target, (tmp_w, self.target_size))
+                    if tmp_w > target_w:
+                        # crop
+                        source = source[:, tmp_w // 2 - target_w // 2:tmp_w // 2 + target_w // 2]
+                        target = target[:, tmp_w // 2 - target_w // 2:tmp_w // 2 + target_w // 2]
+                    elif tmp_w < target_w:
+                        # pad w
+                        pad = (target_w - tmp_w) // 2
+                        source = cv2.copyMakeBorder(source, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
+                                                    cv2.BORDER_CONSTANT, value=(0, 0, 0))
+                        target = cv2.copyMakeBorder(target, 0, 0, pad, pad if (target_w - tmp_w) % 2 == 0 else pad + 1,
+                                                    cv2.BORDER_CONSTANT, value=(255, 255, 255))
+                else:
+                    source = cv2.resize(source, (self.target_size, self.target_size))
+                    target = cv2.resize(target, (self.target_size, self.target_size))
 
         return source, target
 
@@ -89,6 +119,12 @@ class InpaintDataset(Dataset):
             prompt = item['prompt']
 
             source = cv2.imread(os.path.join(self.data_root, source_filename))
+            h, w, _ = source.shape
+            if self.target_size > h or self.target_size > w:
+                idx = random.randint(0, len(self.data) - 1)
+                print("this image is too small", source_filename, "width", w, "height", h)
+                continue
+
             target = cv2.imread(os.path.join(self.data_root, target_filename))
 
             source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
