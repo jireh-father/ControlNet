@@ -4,7 +4,7 @@ from share import *
 
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from inpaint_dataset import InpaintDataset
+from inpaint_dataset import SizeClusterInpaintDataset, InpaintDataset, ClusterRandomSampler
 from cldm.logger import ImageLogger
 from cldm.model import create_model, load_state_dict
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
@@ -31,11 +31,31 @@ def main(args):
         filename=os.path.basename(args.default_root_dir) + "-model-{epoch:02d}-{global_step}",
     )
 
-    # Misc
-    dataset = InpaintDataset(args.data_root, args.label_path, use_multi_aspect_ratio=args.use_multi_aspect_ratio,
-                             target_size=args.input_target_size, divisible_by=args.divisible_by,
-                             use_transform=args.use_transform)
-    dataloader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
+    if args.use_size_cluster:
+        # Misc
+        dataset = SizeClusterInpaintDataset(args.data_root, args.label_path, target_size=args.input_target_size,
+                                            divisible_by=args.divisible_by,
+                                            use_transform=args.use_transform)
+
+        sampler = ClusterRandomSampler(dataset, args.batch_size, True)
+
+        dataloader = DataLoader(
+            dataset,
+            batch_size=args.batch_size,
+            sampler=sampler,
+            # shuffle=False,
+            shuffle=True,
+            # num_workers=1,
+            num_workers=args.num_workers,
+            pin_memory=False,
+            drop_last=False)
+    else:
+        dataset = InpaintDataset(args.data_root, args.label_path, target_size=args.input_target_size,
+                                 use_multi_aspect_ratio=args.use_multi_aspect_ratio,
+                                 divisible_by=args.divisible_by,
+                                 use_transform=args.use_transform)
+
+        dataloader = DataLoader(dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     logger = ImageLogger(batch_frequency=args.logger_freq)
     trainer = pl.Trainer(accelerator="gpu", gpus=1, precision=args.precision, callbacks=[logger, checkpoint_callback],
                          max_epochs=args.max_epochs,
@@ -43,7 +63,6 @@ def main(args):
                          accumulate_grad_batches=args.accumulate_grad_batches,
                          auto_lr_find=args.auto_lr_find,
                          )
-
     # Train!
     trainer.fit(model, dataloader)
 
@@ -82,6 +101,8 @@ if __name__ == '__main__':
     parser.add_argument('--divisible_by', type=int, default=None)
     # use_transform
     parser.add_argument('--use_transform', action='store_true', default=False)
+    # use_size_cluster
+    parser.add_argument('--use_size_cluster', action='store_true', default=False)
 
     args = parser.parse_args()
     main(args)
