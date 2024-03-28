@@ -115,22 +115,22 @@ class SizeClusterInpaintDataset(Dataset):
         if w > h:
             target_h = self.target_size
             target_w = int(target_h / h * w)
-            if target_w * (target_w // self.divisible_by) > self.max_size:
-                remain = target_w - self.max_size
-                num_height_divisible = remain // self.divisible_by // 2
-                target_h = target_h - num_height_divisible * self.divisible_by
-                target_w = int(target_h / h * w)
+            # if target_w * (target_w // self.divisible_by) > self.max_size:
+            #     remain = target_w - self.max_size
+            #     num_height_divisible = remain // self.divisible_by // 2
+            #     target_h = target_h - num_height_divisible * self.divisible_by
+            #     target_w = int(target_h / h * w)
 
             if target_w % self.divisible_by != 0:
                 target_w = (target_w // self.divisible_by) * self.divisible_by
         elif w < h:
             target_w = self.target_size
             target_h = int(target_w / w * h)
-            if target_h * (target_h // self.divisible_by) > self.max_size:
-                remain = target_h - self.max_size
-                num_width_divisible = remain // self.divisible_by // 2
-                target_w = target_w - num_width_divisible * self.divisible_by
-                target_h = int(target_w / w * h)
+            # if target_h * (target_h // self.divisible_by) > self.max_size:
+            #     remain = target_h - self.max_size
+            #     num_width_divisible = remain // self.divisible_by // 2
+            #     target_w = target_w - num_width_divisible * self.divisible_by
+            #     target_h = int(target_w / w * h)
 
             if target_h % self.divisible_by != 0:
                 target_h = (target_h // self.divisible_by) * self.divisible_by
@@ -146,11 +146,11 @@ class SizeClusterInpaintDataset(Dataset):
         if w > h:
             target_h = self.target_size
             target_w = int(target_h / h * w)
-            if target_w * (target_w // self.divisible_by) > self.max_size:
-                remain = target_w - self.max_size
-                num_height_divisible = remain // self.divisible_by // 2
-                target_h = target_h - num_height_divisible * self.divisible_by
-                target_w = int(target_h / h * w)
+            # if target_w * (target_w // self.divisible_by) > self.max_size:
+            #     remain = target_w - self.max_size
+            #     num_height_divisible = remain // self.divisible_by // 2
+            #     target_h = target_h - num_height_divisible * self.divisible_by
+            #     target_w = int(target_h / h * w)
 
             source = cv2.resize(source, (target_w, target_h))
             target = cv2.resize(target, (target_w, target_h))
@@ -164,11 +164,11 @@ class SizeClusterInpaintDataset(Dataset):
         elif w < h:
             target_w = self.target_size
             target_h = int(target_w / w * h)
-            if target_h * (target_h // self.divisible_by) > self.max_size:
-                remain = target_h - self.max_size
-                num_width_divisible = remain // self.divisible_by // 2
-                target_w = target_w - num_width_divisible * self.divisible_by
-                target_h = int(target_w / w * h)
+            # if target_h * (target_h // self.divisible_by) > self.max_size:
+            #     remain = target_h - self.max_size
+            #     num_width_divisible = remain // self.divisible_by // 2
+            #     target_w = target_w - num_width_divisible * self.divisible_by
+            #     target_h = int(target_w / w * h)
             source = cv2.resize(source, (target_w, target_h))
             target = cv2.resize(target, (target_w, target_h))
             if target_h % self.divisible_by != 0:
