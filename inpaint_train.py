@@ -35,7 +35,8 @@ def main(args):
         # Misc
         dataset = SizeClusterInpaintDataset(args.data_root, args.label_path, target_size=args.input_target_size,
                                             divisible_by=args.divisible_by,
-                                            use_transform=args.use_transform)
+                                            use_transform=args.use_transform,
+                                            max_size=args.input_max_size)
 
         sampler = ClusterRandomSampler(dataset, args.batch_size, True)
 
@@ -44,8 +45,7 @@ def main(args):
             batch_size=args.batch_size,
             sampler=sampler,
             shuffle=False,
-            # num_workers=1,
-            num_workers=args.num_workers,
+            num_workers=1,
             pin_memory=False,
             drop_last=False)
     else:
@@ -102,6 +102,8 @@ if __name__ == '__main__':
     parser.add_argument('--use_transform', action='store_true', default=False)
     # use_size_cluster
     parser.add_argument('--use_size_cluster', action='store_true', default=False)
+    # input_max_size
+    parser.add_argument('--input_max_size', type=int, default=768)
 
     args = parser.parse_args()
     main(args)

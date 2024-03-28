@@ -56,11 +56,13 @@ class ClusterRandomSampler(Sampler):
 
 
 class SizeClusterInpaintDataset(Dataset):
-    def __init__(self, data_root, label_path, target_size=512, divisible_by=64, use_transform=False):
+    def __init__(self, data_root, label_path, target_size=512, divisible_by=64, use_transform=False,
+                 max_size=768):
         self.data = []
         self.data_root = data_root
         self.target_size = target_size
         self.divisible_by = divisible_by
+        self.max_size = max_size
 
         self.transform = albu.Compose([
             albu.HorizontalFlip(p=0.5),
@@ -88,6 +90,10 @@ class SizeClusterInpaintDataset(Dataset):
                 h, w, _ = source.shape
                 if self.target_size > h or self.target_size > w:
                     print("this image is too small", source_filename, "width", w, "height", h)
+                    continue
+
+                if self.max_size < h or self.max_size < w:
+                    print("this image is too big", source_filename, "width", w, "height", h)
                     continue
 
                 target_h, target_w = self.calc_divisible_size(source)
