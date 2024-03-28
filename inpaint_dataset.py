@@ -95,7 +95,7 @@ class SizeClusterInpaintDataset(Dataset):
                 target_h, target_w = self.calc_divisible_size(source)
 
                 if self.max_size < target_h or self.max_size < target_w:
-                    print("this image is too big", source_filename, "width", w, "height", h)
+                    print("this image is too big", source_filename, "width", target_w, "height", target_h)
                     continue
 
                 key = (target_h, target_w)
