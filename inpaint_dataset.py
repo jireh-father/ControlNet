@@ -98,7 +98,8 @@ class SizeClusterInpaintDataset(Dataset):
                     cluster_dict[key].append(cur_idx)
                 else:
                     cluster_dict[key] = [cur_idx]
-
+        for key in cluster_dict:
+            print(key, len(cluster_dict[key]))
         self.cluster_indices = list(cluster_dict.values())
 
     def calc_divisible_size(self, source):
