@@ -420,7 +420,20 @@ class ControlLDM(LatentDiffusion):
             params += list(self.model.diffusion_model.output_blocks.parameters())
             params += list(self.model.diffusion_model.out.parameters())
         opt = torch.optim.AdamW(params, lr=lr)
+        # if self.use_scheduler:
+        #     assert 'target' in self.scheduler_config
+        #     scheduler = instantiate_from_config(self.scheduler_config)
+        #
+        #     print("Setting up LambdaLR scheduler...")
+        #     scheduler = [
+        #         {
+        #             'scheduler': LambdaLR(opt, lr_lambda=scheduler.schedule),
+        #             'interval': 'step',
+        #             'frequency': 1
+        #         }]
+        #     return [opt], scheduler
         return opt
+
 
     def low_vram_shift(self, is_diffusing):
         if is_diffusing:
