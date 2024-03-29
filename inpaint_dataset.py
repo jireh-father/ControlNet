@@ -79,6 +79,7 @@ class SizeClusterInpaintDataset(Dataset):
 
     def make_cluster_indices(self, label_path):
         cluster_dict = {}
+        num_skip = 0
         with open(label_path, 'rt') as f:
             for line in f:
                 item = json.loads(line)
@@ -89,11 +90,13 @@ class SizeClusterInpaintDataset(Dataset):
 
                 h, w, _ = source.shape
                 if self.target_size > h or self.target_size > w:
-                    print("this image is too small", source_filename, "width", w, "height", h)
+                    num_skip += 1
+                    # print("this image is too small", source_filename, "width", w, "height", h)
                     continue
 
                 if self.max_size < h or self.max_size < w:
-                    print("this image is too big", source_filename, "width", w, "height", h)
+                    num_skip += 1
+                    # print("this image is too big", source_filename, "width", w, "height", h)
                     continue
 
                 target_h, target_w = self.calc_divisible_size(source)
@@ -107,6 +110,7 @@ class SizeClusterInpaintDataset(Dataset):
                     cluster_dict[key] = [cur_idx]
         for key in cluster_dict:
             print(key, len(cluster_dict[key]))
+        print("skip", num_skip, "images")
         self.cluster_indices = list(cluster_dict.values())
 
     def calc_divisible_size(self, source):
