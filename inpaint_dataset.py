@@ -123,6 +123,10 @@ class SizeClusterInpaintDataset(Dataset):
         if w > h:
             target_h = self.target_size
             target_w = int(target_h / h * w)
+            if self.max_size + self.divisible_by < target_w:
+
+                pass
+
             # if target_w * (target_w // self.divisible_by) > self.max_size:
             #     remain = target_w - self.max_size
             #     num_height_divisible = remain // self.divisible_by // 2
@@ -180,13 +184,11 @@ class SizeClusterInpaintDataset(Dataset):
             source = cv2.resize(source, (target_w, target_h))
             target = cv2.resize(target, (target_w, target_h))
             if target_h % self.divisible_by != 0:
-                # crop remaining both side
-                top_remaining = target_h % self.divisible_by // 2
-                bottom_remaining = target_h % self.divisible_by - top_remaining
+                # crop only bottom remaining
+                bottom_remaining = target_h % self.divisible_by
 
-                source = source[top_remaining:-bottom_remaining, :]
-                target = target[top_remaining:-bottom_remaining, :]
-
+                source = source[:-bottom_remaining, :]
+                target = target[:-bottom_remaining, :]
         else:
             source = cv2.resize(source, (self.target_size, self.target_size))
             target = cv2.resize(target, (self.target_size, self.target_size))
