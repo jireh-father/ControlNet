@@ -31,6 +31,9 @@ def main(args):
     output_file = open(args.output_label_path, 'w+', encoding='utf-8')
     pseudo_label_dict = {}
     for col in hair_tag_cols:
+        pl_data = json.load(
+            open(os.path.join(args.pseudo_label_dir, f'infer_{col}.json'), 'r', encoding='utf-8'))
+        pseudo_label_dict[col] = {k.split("_reverse_face_mask")[0] + ".jpg": pl_data[k] for k in pl_data}
         pseudo_label_dict[col] = json.load(
             open(os.path.join(args.pseudo_label_dir, f'infer_{col}.json'), 'r', encoding='utf-8'))
     with open(args.src_label_path, 'r', encoding='utf-8') as f:
