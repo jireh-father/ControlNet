@@ -53,7 +53,9 @@ def main(args):
             new_prompt = ', '.join(new_prompt)
             output_file.write(
                 json.dumps(
-                    {"source": item["source"], "target": item["target"], "prompt": f"{new_prompt}, {prompt}"}) + "\n")
+                    {"source": item["source"], "target": item["target"], "prompt": f"{new_prompt}, {prompt}"},
+                    ensure_ascii=False)
+                + "\n")
 
     output_file.close()
     print("done")
