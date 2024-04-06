@@ -31,13 +31,12 @@ def main(args):
     output_file = open(args.output_label_path, 'w+', encoding='utf-8')
     pseudo_label_dict = {}
     for col in hair_tag_cols:
-        pl_data = json.load(
+        pseudo_label_dict[col] = json.load(
             open(os.path.join(args.pseudo_label_dir, f'infer_{col}.json'), 'r', encoding='utf-8'))
-        pseudo_label_dict[col] = {k.split("_reverse_face_mask")[0] + ".jpg": pl_data[k] for k in pl_data}
     with open(args.src_label_path, 'r', encoding='utf-8') as f:
         for line in f:
             item = json.loads(line)
-            file_name = os.path.basename(item['source'])
+            file_name = os.path.basename(item['source']).split("_reverse_face_mask")[0] + ".jpg"
             prompt = item['prompt']
             new_prompt = []
             for col in pseudo_label_dict:
