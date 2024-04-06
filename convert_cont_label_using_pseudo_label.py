@@ -52,7 +52,8 @@ def main(args):
             prompt = prompt[prompt.index('1girl'):]
             new_prompt = ', '.join(new_prompt)
             output_file.write(
-                f'{{"source": "{item["source"]}", "target": "{item["target"]}", "prompt": "{new_prompt}, {prompt}"}}\n')
+                json.dumps(
+                    {"source": item["source"], "target": item["target"], "prompt": f"{new_prompt}, {prompt}"}) + "\n")
 
     output_file.close()
     print("done")
