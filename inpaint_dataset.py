@@ -57,7 +57,7 @@ class ClusterRandomSampler(Sampler):
 
 class SizeClusterInpaintDataset(Dataset):
     def __init__(self, data_root, label_path, target_size=512, divisible_by=64, use_transform=False,
-                 max_size=768):
+                 max_size=768, inpaint_mode='reverse_face_mask'): #inpaint_mode: reverse_face_mask, reverse_face_mask_and_lineart, random_mask_and_lineart
         self.data = []
         self.data_root = data_root
         self.target_size = target_size
@@ -73,6 +73,7 @@ class SizeClusterInpaintDataset(Dataset):
         self.use_transform = use_transform
         self.cluster_indices = []
         self.make_cluster_indices(label_path)
+        self.inpaint_mode = inpaint_mode
 
     def __len__(self):
         return len(self.data)
@@ -144,7 +145,7 @@ class SizeClusterInpaintDataset(Dataset):
 
         return target_h, target_w
 
-    def resize_image(self, source, target):
+    def resize_image(self, source, target, source_guide=None):
         h, w, _ = source.shape
 
         if w > h:
@@ -153,6 +154,8 @@ class SizeClusterInpaintDataset(Dataset):
 
             source = cv2.resize(source, (target_w, target_h))
             target = cv2.resize(target, (target_w, target_h))
+            if source_guide:
+                source_guide = cv2.resize(source_guide, (target_w, target_h))
             if target_w > self.max_size or target_w % self.divisible_by != 0:
                 if target_w > self.max_size:
                     left_remaining = (target_w - self.max_size) // 2
@@ -164,11 +167,15 @@ class SizeClusterInpaintDataset(Dataset):
 
                 source = source[:, left_remaining:-right_remaining]
                 target = target[:, left_remaining:-right_remaining]
+                if source_guide:
+                    source_guide = source_guide[:, left_remaining:-right_remaining]
         elif w < h:
             target_w = self.target_size
             target_h = int(target_w / w * h)
             source = cv2.resize(source, (target_w, target_h))
             target = cv2.resize(target, (target_w, target_h))
+            if source_guide:
+                source_guide = cv2.resize(source_guide, (target_w, target_h))
             if target_h > self.max_size or target_h % self.divisible_by != 0:
                 if target_h > self.max_size:
                     bottom_remaining = target_h - self.max_size
@@ -177,11 +184,15 @@ class SizeClusterInpaintDataset(Dataset):
 
                 source = source[:-bottom_remaining, :]
                 target = target[:-bottom_remaining, :]
+                if source_guide:
+                    source_guide = source_guide[:-bottom_remaining, :]
         else:
             source = cv2.resize(source, (self.target_size, self.target_size))
             target = cv2.resize(target, (self.target_size, self.target_size))
+            if source_guide:
+                source_guide = cv2.resize(source_guide, (self.target_size, self.target_size))
 
-        return source, target
+        return source, target, source_guide
 
     def __getitem__(self, idx):
         while True:
@@ -189,6 +200,10 @@ class SizeClusterInpaintDataset(Dataset):
 
             source_filename = item['source']
             target_filename = item['target']
+            if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
+                source_guide_filename = item['source_guide']
+            else:
+                source_guide_filename = None
             prompt = item['prompt']
 
             source = cv2.imread(os.path.join(self.data_root, source_filename))
@@ -204,10 +219,16 @@ class SizeClusterInpaintDataset(Dataset):
             source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
             target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
 
+            if source_guide_filename:
+                source_guide = cv2.imread(os.path.join(self.data_root, source_guide_filename))
+                source_guide = cv2.cvtColor(source_guide, cv2.COLOR_BGR2RGB)
+            else:
+                source_guide = None
+
             try:
-                source, target = self.resize_image(source, target)
+                source, target, source_guide = self.resize_image(source, target, source_guide)
             except Exception as e:
-                print("error file path", source_filename, target_filename)
+                print("error file path", source_filename, target_filename, source_guide_filename)
                 traceback.print_exc()
                 idx = random.randint(0, len(self.data) - 1)
                 continue
@@ -217,13 +238,18 @@ class SizeClusterInpaintDataset(Dataset):
 
             # Normalize source images to [0, 1].
             source = source.astype(np.float32) / 255.0
+            if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
+                source_guide = source_guide.astype(np.float32) / 255.0
 
             # Normalize target images to [-1, 1].
             target = (target.astype(np.float32) / 127.5) - 1.0
 
             # deep copy target
             inpaint_source = copy.deepcopy(target)
+
             inpaint_source[source > 0.5] = -1.0
+            if self.inpaint_mode == "reverse_face_mask_and_lineart":
+                inpaint_source[source_guide > 0.5] = 1.0
 
             return dict(jpg=target, txt=prompt, hint=inpaint_source)
 

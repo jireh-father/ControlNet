@@ -36,7 +36,8 @@ def main(args):
         dataset = SizeClusterInpaintDataset(args.data_root, args.label_path, target_size=args.input_target_size,
                                             divisible_by=args.divisible_by,
                                             use_transform=args.use_transform,
-                                            max_size=args.input_max_size)
+                                            max_size=args.input_max_size,
+                                            inpaint_mode=args.inpaint_mode)
 
         sampler = ClusterRandomSampler(dataset, args.batch_size, True)
 
@@ -104,6 +105,8 @@ if __name__ == '__main__':
     parser.add_argument('--use_size_cluster', action='store_true', default=False)
     # input_max_size
     parser.add_argument('--input_max_size', type=int, default=768)
+    #inpaint_mode
+    parser.add_argument('--inpaint_mode', type=str, default='reverse_face_mask') # reverse_face_mask, reverse_face_mask_and_lineart, random_mask_and_lineart
 
     args = parser.parse_args()
     main(args)
