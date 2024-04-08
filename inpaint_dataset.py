@@ -56,8 +56,14 @@ class ClusterRandomSampler(Sampler):
 
 
 class SizeClusterInpaintDataset(Dataset):
-    def __init__(self, data_root, label_path, guide_mask_dir_name=None, target_size=512, divisible_by=64, use_transform=False,
-                 max_size=768, inpaint_mode='reverse_face_mask'): #inpaint_mode: reverse_face_mask, reverse_face_mask_and_lineart, random_mask_and_lineart
+    def __init__(self, data_root, label_path, guide_mask_dir_name=None, target_size=512, divisible_by=64,
+                 use_transform=False,
+                 max_size=768, inpaint_mode='reverse_face_mask',
+                 # inpaint_mode: reverse_face_mask, reverse_face_mask_and_lineart, random_mask_and_lineart
+                 min_mask_dilation_range=1,
+                 max_mask_dilation_range=70,
+                 use_hair_mask_prob=0.3,
+                 ):
         self.data = []
         self.data_root = data_root
         self.target_size = target_size
@@ -75,7 +81,7 @@ class SizeClusterInpaintDataset(Dataset):
         elif inpaint_mode == "reverse_face_mask_and_lineart" or inpaint_mode == "random_mask_and_lineart":
             self.transform = albu.Compose([
                 albu.HorizontalFlip(p=0.5),
-                albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
+                albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1, 0.02), contrast_limit=0.2),
                 albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
                 albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
             ], additional_targets={'mask1': 'mask'})
@@ -83,9 +89,38 @@ class SizeClusterInpaintDataset(Dataset):
         self.cluster_indices = []
         self.make_cluster_indices(label_path)
         self.inpaint_mode = inpaint_mode
+        self.mask_dilation_range = (min_mask_dilation_range, max_mask_dilation_range)
+        self.use_hair_mask_prob = use_hair_mask_prob
 
     def __len__(self):
         return len(self.data)
+
+    def get_random_mask(self, hair_mask, guide_mask):
+        if random.random() < self.use_hair_mask_prob:
+            rand_mask = hair_mask.copy()
+        else:
+            # draw and fill random ellipse as white color
+            ellipse_image = np.zeros(guide_mask.shape[:2], dtype=np.uint8)
+            center_x = random.randint(0, guide_mask.shape[1])
+            center_y = random.randint(0, guide_mask.shape[0])
+            axes_x = random.randint(1, guide_mask.shape[1] // 2)
+            axes_y = random.randint(1, guide_mask.shape[0] // 2)
+            angle = random.randint(0, 360)
+            color = 255
+            thickness = -1
+            cv2.ellipse(ellipse_image, (center_x, center_y), (axes_x, axes_y), angle, 0, 360, color, thickness)
+            cv2.imshow("im", ellipse_image)
+            cv2.waitKey(0)
+
+            rand_mask = cv2.bitwise_and(hair_mask, hair_mask, mask=ellipse_image)
+            # check mask empty
+            if rand_mask.max() == 0:
+                return False
+        dilation = random.randint(self.mask_dilation_range[0], self.mask_dilation_range[1])
+        rand_mask = cv2.dilate(rand_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilation, dilation)))
+        rand_guide_mask = cv2.bitwise_and(guide_mask, rand_mask)
+
+        return guide_mask, rand_guide_mask
 
     def make_cluster_indices(self, label_path):
         cluster_dict = {}
@@ -258,7 +293,7 @@ class SizeClusterInpaintDataset(Dataset):
             if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
                 source_guide = source_guide.astype(np.float32) / 255.0
 
-            # Normalize target images to [-1, 1].
+            # Normalize tarƒet images to [-1, 1].
             target = (target.astype(np.float32) / 127.5) - 1.0
 
             # deep copy target
@@ -267,6 +302,14 @@ class SizeClusterInpaintDataset(Dataset):
             inpaint_source[source > 0.5] = -1.0
             if self.inpaint_mode == "reverse_face_mask_and_lineart":
                 inpaint_source[source_guide > 0.5] = 1.0
+            elif self.inpaint_mode == "random_mask_and_lineart":
+                while True:
+                    masks = self.get_random_mask(source, source_guide)
+                    if masks is not False:
+                        break
+                guide_mask, rand_guide_mask = masks
+                inpaint_source[guide_mask > 0.5] = -1.0
+                inpaint_source[rand_guide_mask > 0.5] = 1.0
 
             return dict(jpg=target, txt=prompt, hint=inpaint_source)
 
