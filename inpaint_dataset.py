@@ -4,6 +4,7 @@ import traceback
 
 import cv2
 import numpy as np
+import re
 
 from torch.utils.data import Dataset
 import os
@@ -109,28 +110,53 @@ class SizeClusterInpaintDataset(Dataset):
             color = 255
             thickness = -1
             cv2.ellipse(ellipse_image, (center_x, center_y), (axes_x, axes_y), angle, 0, 360, color, thickness)
-            cv2.imshow("im", ellipse_image)
-            cv2.waitKey(0)
+            # cv2.imshow("random mask", ellipse_image)
+            # cv2.waitKey(0)
+            # cv2.imshow("hair mask", hair_mask)
+            # cv2.waitKey(0)
 
             rand_mask = cv2.bitwise_and(hair_mask, hair_mask, mask=ellipse_image)
+            # cv2.imshow("rand mask", rand_mask)
+            # cv2.waitKey(0)
             # check mask empty
             if rand_mask.max() == 0:
                 return False
         dilation = random.randint(self.mask_dilation_range[0], self.mask_dilation_range[1])
         rand_mask = cv2.dilate(rand_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilation, dilation)))
-        rand_guide_mask = cv2.bitwise_and(guide_mask, rand_mask)
+        rand_guide_mask = guide_mask.copy()
+        rand_guide_mask[rand_mask < 1] = 0
+        # rand_guide_mask = rand_mask & guide_mask
+        if rand_guide_mask.max() == 0:
+            return False
+        # cv2.imshow("guide_mask", guide_mask)
+        # cv2.waitKey(0)
+        # cv2.imshow("rand guide mask", rand_guide_mask)
+        # cv2.waitKey(0)
+        # cv2.imshow("rand mask", rand_mask)
+        # cv2.waitKey(0)
 
-        return guide_mask, rand_guide_mask
+        return rand_mask, rand_guide_mask
 
     def make_cluster_indices(self, label_path):
         cluster_dict = {}
         num_skip = 0
-        with open(label_path, 'rt') as f:
+        with open(label_path, 'rt', encoding='utf-8') as f:
             for line in f:
                 item = json.loads(line)
 
                 source_filename = item['source']
 
+                # check source_filename has korean character
+                if re.search(r'[ㄱ-ㅎ가-힣]', source_filename) is not None:
+                    print("skip al", source_filename)
+                    num_skip += 1
+                    continue
+
+                if not os.path.exists(os.path.join(self.data_root, source_filename)):
+                    print("skip ex", source_filename)
+                    num_skip += 1
+                    continue
+                print(os.path.join(self.data_root, source_filename))
                 source = cv2.imread(os.path.join(self.data_root, source_filename))
 
                 h, w, _ = source.shape
@@ -160,6 +186,7 @@ class SizeClusterInpaintDataset(Dataset):
         for key in cluster_dict:
             print(key, len(cluster_dict[key]))
         print("skip", num_skip, "images")
+        print("data", len(self.data))
         self.cluster_indices = list(cluster_dict.values())
 
     def calc_divisible_size(self, source):
@@ -299,17 +326,19 @@ class SizeClusterInpaintDataset(Dataset):
             # deep copy target
             inpaint_source = copy.deepcopy(target)
 
-            inpaint_source[source > 0.5] = -1.0
             if self.inpaint_mode == "reverse_face_mask_and_lineart":
+                inpaint_source[source > 0.5] = -1.0
                 inpaint_source[source_guide > 0.5] = 1.0
             elif self.inpaint_mode == "random_mask_and_lineart":
                 while True:
                     masks = self.get_random_mask(source, source_guide)
                     if masks is not False:
                         break
-                guide_mask, rand_guide_mask = masks
-                inpaint_source[guide_mask > 0.5] = -1.0
+                rand_mask, rand_guide_mask = masks
+                inpaint_source[rand_mask > 0.5] = -1.0
                 inpaint_source[rand_guide_mask > 0.5] = 1.0
+            elif self.inpaint_mode == "reverse_face_mask":
+                inpaint_source[source > 0.5] = -1.0
 
             return dict(jpg=target, txt=prompt, hint=inpaint_source)
 
@@ -470,13 +499,33 @@ class InpaintDataset(Dataset):
 
 
 if __name__ == '__main__':
-    dataset = InpaintDataset(data_root='E:/dataset/fill50k',
-                             label_path='E:\dataset/fill50k/prompt.json')
+    # dataset = SizeClusterInpaintDataset("D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet",
+    #                                     "D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/reverse_face_mask_prompt.json",
+    #                                     guide_mask_dir_name="D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/hair_lineart_mask",
+    #                                     target_size=512, divisible_by=64, use_transform=False,
+    #                                     max_size=768, inpaint_mode='reverse_face_mask_and_lineart')
+    dataset = SizeClusterInpaintDataset("D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet",
+                                        "D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/exact_hair_mask_prompt.json",
+                                        guide_mask_dir_name="D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/hair_lineart_mask",
+                                        target_size=512, divisible_by=64, use_transform=False,
+                                        max_size=768, inpaint_mode='random_mask_and_lineart',use_hair_mask_prob=0.)
+    # dataset = InpaintDataset(data_root='E:/dataset/fill50k',
+    #                          label_path='E:\dataset/fill50k/prompt.json')
     print(len(dataset))
     import torch
 
-    dataset_loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
-    for batch in dataset_loader:
+    sampler = ClusterRandomSampler(dataset, 1, True)
+    from torch.utils.data import DataLoader
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=1,
+        sampler=sampler,
+        shuffle=False,
+        num_workers=1,
+        pin_memory=False,
+        drop_last=False)
+    for batch in dataloader:
         print(batch['jpg'].shape, batch['txt'], batch['hint'].shape)
         # convert to pil image
         from PIL import Image
