@@ -36,7 +36,7 @@ def main(args):
     with open(args.src_label_path, 'r', encoding='utf-8') as f:
         for line in f:
             item = json.loads(line)
-            file_name = os.path.basename(item['source']).split("_reverse_face_mask")[0] + ".jpg"
+            file_name = os.path.basename(item['source']).split(args.mask_file_name_prefix)[0] + ".jpg"
             prompt = item['prompt']
             new_prompt = []
             for col in pseudo_label_dict:
@@ -70,5 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_label_path', type=str, default='./data/output')
     # score_thr
     parser.add_argument('--score_thr', type=float, default=0.7)
+    # mask_file_prefix
+    parser.add_argument('--mask_file_name_prefix', type=str, default='_reverse_face_mask')
 
     main(parser.parse_args())
