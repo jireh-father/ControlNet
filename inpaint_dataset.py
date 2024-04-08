@@ -163,7 +163,7 @@ class SizeClusterInpaintDataset(Dataset):
 
             source = cv2.resize(source, (target_w, target_h))
             target = cv2.resize(target, (target_w, target_h))
-            if source_guide:
+            if source_guide is not None:
                 source_guide = cv2.resize(source_guide, (target_w, target_h))
             if target_w > self.max_size or target_w % self.divisible_by != 0:
                 if target_w > self.max_size:
@@ -176,14 +176,14 @@ class SizeClusterInpaintDataset(Dataset):
 
                 source = source[:, left_remaining:-right_remaining]
                 target = target[:, left_remaining:-right_remaining]
-                if source_guide:
+                if source_guide is not None:
                     source_guide = source_guide[:, left_remaining:-right_remaining]
         elif w < h:
             target_w = self.target_size
             target_h = int(target_w / w * h)
             source = cv2.resize(source, (target_w, target_h))
             target = cv2.resize(target, (target_w, target_h))
-            if source_guide:
+            if source_guide is not None:
                 source_guide = cv2.resize(source_guide, (target_w, target_h))
             if target_h > self.max_size or target_h % self.divisible_by != 0:
                 if target_h > self.max_size:
@@ -193,12 +193,12 @@ class SizeClusterInpaintDataset(Dataset):
 
                 source = source[:-bottom_remaining, :]
                 target = target[:-bottom_remaining, :]
-                if source_guide:
+                if source_guide is not None:
                     source_guide = source_guide[:-bottom_remaining, :]
         else:
             source = cv2.resize(source, (self.target_size, self.target_size))
             target = cv2.resize(target, (self.target_size, self.target_size))
-            if source_guide:
+            if source_guide is not None:
                 source_guide = cv2.resize(source_guide, (self.target_size, self.target_size))
 
         return source, target, source_guide
