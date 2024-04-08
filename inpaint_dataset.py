@@ -56,13 +56,14 @@ class ClusterRandomSampler(Sampler):
 
 
 class SizeClusterInpaintDataset(Dataset):
-    def __init__(self, data_root, label_path, target_size=512, divisible_by=64, use_transform=False,
+    def __init__(self, data_root, label_path, guide_mask_dir_name=None, target_size=512, divisible_by=64, use_transform=False,
                  max_size=768, inpaint_mode='reverse_face_mask'): #inpaint_mode: reverse_face_mask, reverse_face_mask_and_lineart, random_mask_and_lineart
         self.data = []
         self.data_root = data_root
         self.target_size = target_size
         self.divisible_by = divisible_by
         self.max_size = max_size
+        self.guide_mask_dir_name = guide_mask_dir_name
 
         if inpaint_mode == "reverse_face_mask":
             self.transform = albu.Compose([
@@ -209,7 +210,10 @@ class SizeClusterInpaintDataset(Dataset):
             source_filename = item['source']
             target_filename = item['target']
             if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
-                source_guide_filename = item['source_guide']
+                if self.guide_mask_dir_name:
+                    source_guide_filename = os.path.join(self.guide_mask_dir_name, os.path.basename(item['target']))
+                else:
+                    source_guide_filename = item['source_guide']
             else:
                 source_guide_filename = None
             prompt = item['prompt']

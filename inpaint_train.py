@@ -37,7 +37,8 @@ def main(args):
                                             divisible_by=args.divisible_by,
                                             use_transform=args.use_transform,
                                             max_size=args.input_max_size,
-                                            inpaint_mode=args.inpaint_mode)
+                                            inpaint_mode=args.inpaint_mode,
+                                            guide_mask_dir_name=args.guide_mask_dir_name)
 
         sampler = ClusterRandomSampler(dataset, args.batch_size, True)
 
@@ -75,6 +76,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_config', type=str, default='./models/cldm_v15.yaml')
     parser.add_argument('--data_root', type=str, help='Root directory of the dataset')
     parser.add_argument('--label_path', type=str, help='Path to the label file')
+    parser.add_argument('--guide_mask_dir_name', type=str, default='hair_lineart_mask')
     # batch_size
     parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--num_workers', type=int, default=4)
