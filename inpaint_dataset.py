@@ -64,12 +64,20 @@ class SizeClusterInpaintDataset(Dataset):
         self.divisible_by = divisible_by
         self.max_size = max_size
 
-        self.transform = albu.Compose([
-            albu.HorizontalFlip(p=0.5),
-            # albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
-            albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
-            albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
-        ])
+        if inpaint_mode == "reverse_face_mask":
+            self.transform = albu.Compose([
+                albu.HorizontalFlip(p=0.5),
+                # albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
+                albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
+                albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
+            ])
+        elif inpaint_mode == "reverse_face_mask_and_lineart" or inpaint_mode == "random_mask_and_lineart":
+            self.transform = albu.Compose([
+                albu.HorizontalFlip(p=0.5),
+                albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
+                albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
+                albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
+            ], additional_targets={'mask1': 'mask'})
         self.use_transform = use_transform
         self.cluster_indices = []
         self.make_cluster_indices(label_path)
@@ -234,7 +242,12 @@ class SizeClusterInpaintDataset(Dataset):
                 continue
 
             if self.use_transform:
-                target = self.transform(image=target)['image']
+                if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
+                    transformed = self.transform(image=target, mask=source, mask1=source_guide)
+                    target, source, source_guide = transformed['image'], transformed['mask'], transformed['mask1']
+                else:
+                    transformed = self.transform(image=target, mask=source)
+                    target, source = transformed['image'], transformed['mask']
 
             # Normalize source images to [0, 1].
             source = source.astype(np.float32) / 255.0
@@ -267,7 +280,7 @@ class InpaintDataset(Dataset):
                 self.data.append(json.loads(line))
 
         self.transform = albu.Compose([
-            # albu.HorizontalFlip(p=0.5),
+            albu.HorizontalFlip(p=0.5),
             # albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
             albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
             albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
@@ -393,7 +406,8 @@ class InpaintDataset(Dataset):
                 continue
 
             if self.use_transform:
-                target = self.transform(image=target)['image']
+                transformed = self.transform(image=target, mask=source)
+                target, source = transformed['image'], transformed['mask']
 
             # Normalize source images to [0, 1].
             source = source.astype(np.float32) / 255.0
