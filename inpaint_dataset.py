@@ -146,17 +146,6 @@ class SizeClusterInpaintDataset(Dataset):
 
                 source_filename = item['source']
 
-                # check source_filename has korean character
-                if re.search(r'[ㄱ-ㅎ가-힣]', source_filename) is not None:
-                    print("skip al", source_filename)
-                    num_skip += 1
-                    continue
-
-                if not os.path.exists(os.path.join(self.data_root, source_filename)):
-                    print("skip ex", source_filename)
-                    num_skip += 1
-                    continue
-                print(os.path.join(self.data_root, source_filename))
                 source = cv2.imread(os.path.join(self.data_root, source_filename))
 
                 h, w, _ = source.shape
