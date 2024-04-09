@@ -57,7 +57,8 @@ class ClusterRandomSampler(Sampler):
 
 
 class SizeClusterInpaintDataset(Dataset):
-    def __init__(self, data_root, label_path, guide_mask_dir_name=None, target_size=512, divisible_by=64,
+    def __init__(self, data_root, label_path, guide_mask_dir_name=None, avail_mask_dir_name=None,
+                 avail_mask_file_prefix='_reverse_face_mask_00001_.png', target_size=512, divisible_by=64,
                  use_transform=False,
                  max_size=768, inpaint_mode='reverse_face_mask',
                  # inpaint_mode: reverse_face_mask, reverse_face_mask_and_lineart, random_mask_and_lineart
@@ -71,21 +72,22 @@ class SizeClusterInpaintDataset(Dataset):
         self.divisible_by = divisible_by
         self.max_size = max_size
         self.guide_mask_dir_name = guide_mask_dir_name
+        self.avail_mask_dir_name = avail_mask_dir_name
+        self.avail_mask_file_prefix = avail_mask_file_prefix
 
+        transform_list = [
+            albu.HorizontalFlip(p=0.5),
+            # albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
+            albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
+            albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
+        ]
         if inpaint_mode == "reverse_face_mask":
-            self.transform = albu.Compose([
-                albu.HorizontalFlip(p=0.5),
-                # albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
-                albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
-                albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
-            ])
-        elif inpaint_mode == "reverse_face_mask_and_lineart" or inpaint_mode == "random_mask_and_lineart":
-            self.transform = albu.Compose([
-                albu.HorizontalFlip(p=0.5),
-                albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1, 0.02), contrast_limit=0.2),
-                albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
-                albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
-            ], additional_targets={'mask1': 'mask'})
+            self.transform = albu.Compose(transform_list)
+        elif inpaint_mode == "reverse_face_mask_and_lineart":
+            self.transform = albu.Compose(transform_list, additional_targets={'mask1': 'mask'})
+        elif inpaint_mode == "random_mask_and_lineart":
+            self.transform = albu.Compose(transform_list, additional_targets={'mask1': 'mask', 'mask2': 'mask'})
+
         self.use_transform = use_transform
         self.cluster_indices = []
         self.make_cluster_indices(label_path)
@@ -96,7 +98,7 @@ class SizeClusterInpaintDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def get_random_mask(self, hair_mask, guide_mask):
+    def get_random_mask(self, hair_mask, guide_mask, avail_mask):
         if random.random() < self.use_hair_mask_prob:
             rand_mask = hair_mask.copy()
         else:
@@ -134,6 +136,13 @@ class SizeClusterInpaintDataset(Dataset):
         # cv2.waitKey(0)
         # cv2.imshow("rand mask", rand_mask)
         # cv2.waitKey(0)
+
+        rand_mask[avail_mask < 1] = 0
+        rand_guide_mask[avail_mask < 1] = 0
+        if rand_mask.max() == 0:
+            return False
+        if rand_guide_mask.max() == 0:
+            return False
 
         return rand_mask, rand_guide_mask
 
@@ -205,7 +214,7 @@ class SizeClusterInpaintDataset(Dataset):
 
         return target_h, target_w
 
-    def resize_image(self, source, target, source_guide=None):
+    def resize_image(self, source, target, source_guide=None, avail_mask=None):
         h, w, _ = source.shape
 
         if w > h:
@@ -216,6 +225,8 @@ class SizeClusterInpaintDataset(Dataset):
             target = cv2.resize(target, (target_w, target_h))
             if source_guide is not None:
                 source_guide = cv2.resize(source_guide, (target_w, target_h))
+            if avail_mask is not None:
+                avail_mask = cv2.resize(avail_mask, (target_w, target_h))
             if target_w > self.max_size or target_w % self.divisible_by != 0:
                 if target_w > self.max_size:
                     left_remaining = (target_w - self.max_size) // 2
@@ -229,6 +240,9 @@ class SizeClusterInpaintDataset(Dataset):
                 target = target[:, left_remaining:-right_remaining]
                 if source_guide is not None:
                     source_guide = source_guide[:, left_remaining:-right_remaining]
+                if avail_mask is not None:
+                    avail_mask = avail_mask[:, left_remaining:-right_remaining]
+
         elif w < h:
             target_w = self.target_size
             target_h = int(target_w / w * h)
@@ -236,6 +250,8 @@ class SizeClusterInpaintDataset(Dataset):
             target = cv2.resize(target, (target_w, target_h))
             if source_guide is not None:
                 source_guide = cv2.resize(source_guide, (target_w, target_h))
+            if avail_mask is not None:
+                avail_mask = cv2.resize(avail_mask, (target_w, target_h))
             if target_h > self.max_size or target_h % self.divisible_by != 0:
                 if target_h > self.max_size:
                     bottom_remaining = target_h - self.max_size
@@ -246,13 +262,17 @@ class SizeClusterInpaintDataset(Dataset):
                 target = target[:-bottom_remaining, :]
                 if source_guide is not None:
                     source_guide = source_guide[:-bottom_remaining, :]
+                if avail_mask is not None:
+                    avail_mask = avail_mask[:-bottom_remaining, :]
         else:
             source = cv2.resize(source, (self.target_size, self.target_size))
             target = cv2.resize(target, (self.target_size, self.target_size))
             if source_guide is not None:
                 source_guide = cv2.resize(source_guide, (self.target_size, self.target_size))
+            if avail_mask is not None:
+                avail_mask = cv2.resize(avail_mask, (self.target_size, self.target_size))
 
-        return source, target, source_guide
+        return source, target, source_guide, avail_mask
 
     def __getitem__(self, idx):
         while True:
@@ -265,8 +285,15 @@ class SizeClusterInpaintDataset(Dataset):
                     source_guide_filename = os.path.join(self.guide_mask_dir_name, os.path.basename(item['target']))
                 else:
                     source_guide_filename = item['source_guide']
+                if self.inpaint_mode == "random_mask_and_lineart":
+                    if self.avail_mask_dir_name:
+                        avail_mask_filename = os.path.join(self.avail_mask_dir_name, os.path.splitext(
+                            os.path.basename(item['target']))[0] + self.avail_mask_file_prefix)
+                    else:
+                        avail_mask_filename = item['source_avail_mask']
             else:
                 source_guide_filename = None
+                avail_mask_filename = None
             prompt = item['prompt']
 
             source = cv2.imread(os.path.join(self.data_root, source_filename))
@@ -288,8 +315,14 @@ class SizeClusterInpaintDataset(Dataset):
             else:
                 source_guide = None
 
+            if avail_mask_filename:
+                avail_mask = cv2.imread(os.path.join(self.data_root, avail_mask_filename))
+                avail_mask = cv2.cvtColor(avail_mask, cv2.COLOR_BGR2RGB)
+            else:
+                avail_mask = None
+
             try:
-                source, target, source_guide = self.resize_image(source, target, source_guide)
+                source, target, source_guide, avail_mask = self.resize_image(source, target, source_guide, avail_mask)
             except Exception as e:
                 print("error file path", source_filename, target_filename, source_guide_filename)
                 traceback.print_exc()
@@ -297,17 +330,24 @@ class SizeClusterInpaintDataset(Dataset):
                 continue
 
             if self.use_transform:
-                if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
+                if self.inpaint_mode == "reverse_face_mask_and_lineart":
                     transformed = self.transform(image=target, mask=source, mask1=source_guide)
                     target, source, source_guide = transformed['image'], transformed['mask'], transformed['mask1']
+                elif self.inpaint_mode == "random_mask_and_lineart":
+                    transformed = self.transform(image=target, mask=source, mask1=source_guide, mask2=avail_mask)
+                    target, source, source_guide, avail_mask = transformed['image'], transformed['mask'], transformed[
+                        'mask1'], transformed['mask2']
                 else:
                     transformed = self.transform(image=target, mask=source)
                     target, source = transformed['image'], transformed['mask']
 
             # Normalize source images to [0, 1].
             source = source.astype(np.float32) / 255.0
-            if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
+            if self.inpaint_mode == "reverse_face_mask_and_lineart":
                 source_guide = source_guide.astype(np.float32) / 255.0
+            elif self.inpaint_mode == "random_mask_and_lineart":
+                source_guide = source_guide.astype(np.float32) / 255.0
+                avail_mask = avail_mask.astype(np.float32) / 255.0
 
             # Normalize tarƒet images to [-1, 1].
             target = (target.astype(np.float32) / 127.5) - 1.0
@@ -320,7 +360,7 @@ class SizeClusterInpaintDataset(Dataset):
                 inpaint_source[source_guide > 0.5] = 1.0
             elif self.inpaint_mode == "random_mask_and_lineart":
                 while True:
-                    masks = self.get_random_mask(source, source_guide)
+                    masks = self.get_random_mask(source, source_guide, avail_mask)
                     if masks is not False:
                         break
                 rand_mask, rand_guide_mask = masks
@@ -497,7 +537,7 @@ if __name__ == '__main__':
                                         "D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/exact_hair_mask_prompt.json",
                                         guide_mask_dir_name="D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/hair_lineart_mask",
                                         target_size=512, divisible_by=64, use_transform=False,
-                                        max_size=768, inpaint_mode='random_mask_and_lineart',use_hair_mask_prob=0.)
+                                        max_size=768, inpaint_mode='random_mask_and_lineart', use_hair_mask_prob=0.)
     # dataset = InpaintDataset(data_root='E:/dataset/fill50k',
     #                          label_path='E:\dataset/fill50k/prompt.json')
     print(len(dataset))

@@ -38,7 +38,10 @@ def main(args):
                                             use_transform=args.use_transform,
                                             max_size=args.input_max_size,
                                             inpaint_mode=args.inpaint_mode,
-                                            guide_mask_dir_name=args.guide_mask_dir_name)
+                                            guide_mask_dir_name=args.guide_mask_dir_name,
+                                            avail_mask_dir_name=args.avail_mask_dir_name,
+                                            avail_mask_file_prefix=args.avail_mask_file_prefix,
+                                            )
 
         sampler = ClusterRandomSampler(dataset, args.batch_size, True)
 
@@ -109,6 +112,10 @@ if __name__ == '__main__':
     parser.add_argument('--input_max_size', type=int, default=768)
     #inpaint_mode
     parser.add_argument('--inpaint_mode', type=str, default='reverse_face_mask') # reverse_face_mask, reverse_face_mask_and_lineart, random_mask_and_lineart
+    # avail_mask_dir_name
+    parser.add_argument('--avail_mask_dir_name', type=str, default='reverse_face_mask_source')
+    # avail_mask_file_prefix
+    parser.add_argument('--avail_mask_file_prefix', type=str, default='_reverse_face_mask_00001_.png')
 
     args = parser.parse_args()
     main(args)
