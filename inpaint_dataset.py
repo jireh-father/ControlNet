@@ -79,7 +79,7 @@ class SizeClusterInpaintDataset(Dataset):
             albu.HorizontalFlip(p=0.5),
             # albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
             albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
-            albu.RandomGamma(p=0.5, gamma_limit=(100, 150)),
+            albu.RandomGamma(p=0.5, gamma_limit=(100, 120)),
         ]
         if inpaint_mode == "reverse_face_mask":
             self.transform = albu.Compose(transform_list)
