@@ -49,7 +49,6 @@ def main(args):
             ori_file_name = os.path.basename(item['source']).replace('_exact_hair_mask_00001_', '').replace(
                 '_reverse_face_mask_00001_', '')
             if human_label_dict and ori_file_name in human_label_dict:
-                print("hit human label")
                 prompt = human_label_dict[ori_file_name]
                 num_hit += 1
             else:
