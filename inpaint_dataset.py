@@ -361,10 +361,16 @@ class SizeClusterInpaintDataset(Dataset):
                 inpaint_source[source > 0.5] = -1.0
                 inpaint_source[source_guide > 0.5] = 1.0
             elif self.inpaint_mode == "random_mask_and_lineart":
+                num_try = 0
                 while True:
                     masks = self.get_random_mask(source, source_guide, avail_mask)
                     if masks is not False:
                         break
+                    num_try += 1
+                    if num_try > 5:
+                        print("generating random mask failed")
+                        new_idx = random.randint(0, len(self.data) - 1)
+                        return self.__getitem__(new_idx)
                 rand_mask, rand_guide_mask = masks
                 inpaint_source[rand_mask > 0.5] = -1.0
                 inpaint_source[rand_guide_mask > 0.5] = 1.0
