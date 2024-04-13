@@ -41,6 +41,11 @@ def main(args):
                                             guide_mask_dir_name=args.guide_mask_dir_name,
                                             avail_mask_dir_name=args.avail_mask_dir_name,
                                             avail_mask_file_prefix=args.avail_mask_file_prefix,
+                                            use_long_hair_mask_prob=args.use_long_hair_mask_prob,
+                                            use_hair_mask_prob=args.use_hair_mask_prob,
+                                            min_mask_dilation_range=args.min_mask_dilation_range,
+                                            max_mask_dilation_range=args.max_mask_dilation_range,
+                                            use_bottom_hair_prob=args.use_bottom_hair_prob,
                                             )
 
         sampler = ClusterRandomSampler(dataset, args.batch_size, True)
@@ -116,6 +121,16 @@ if __name__ == '__main__':
     parser.add_argument('--avail_mask_dir_name', type=str, default='reverse_face_mask_source')
     # avail_mask_file_prefix
     parser.add_argument('--avail_mask_file_prefix', type=str, default='_reverse_face_mask_00001_.png')
+    # use_long_hair_mask_prob
+    parser.add_argument('--use_long_hair_mask_prob', type=float, default=0.3)
+    # use_hair_mask_prob
+    parser.add_argument('--use_hair_mask_prob', type=float, default=0.3)
+    # use_bottom_hair_prob
+    parser.add_argument('--use_bottom_hair_prob', type=float, default=0.2)
+    # min_mask_dilation_range
+    parser.add_argument('--min_mask_dilation_range', type=int, default=1)
+    # max_mask_dilation_range
+    parser.add_argument('--max_mask_dilation_range', type=int, default=70)
 
     args = parser.parse_args()
     main(args)
