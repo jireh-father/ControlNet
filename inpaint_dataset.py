@@ -545,7 +545,9 @@ if __name__ == '__main__':
                                         "D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/exact_hair_mask_prompt.json",
                                         guide_mask_dir_name="D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/hair_lineart_mask",
                                         target_size=512, divisible_by=64, use_transform=False,
-                                        max_size=768, inpaint_mode='random_mask_and_lineart', use_hair_mask_prob=0.)
+                                        max_size=768, inpaint_mode='random_mask_and_lineart', use_hair_mask_prob=0.,
+                                        avail_mask_dir_name='reverse_face_mask_source',
+                                        avail_mask_file_prefix='_reverse_face_mask_00001_.png')
     # dataset = InpaintDataset(data_root='E:/dataset/fill50k',
     #                          label_path='E:\dataset/fill50k/prompt.json')
     print(len(dataset))
@@ -562,6 +564,7 @@ if __name__ == '__main__':
         num_workers=1,
         pin_memory=False,
         drop_last=False)
+    i = 0
     for batch in dataloader:
         print(batch['jpg'].shape, batch['txt'], batch['hint'].shape)
         # convert to pil image
@@ -579,11 +582,12 @@ if __name__ == '__main__':
 
 
         print(batch['jpg'].max(), batch['jpg'].min())
-        img = to_pil(batch['jpg'][0])
-        plt.imshow(img)
-        plt.show()
+        # img = to_pil(batch['jpg'][0])
+        # plt.imshow(img)
+        # plt.show()
         img = to_pil(batch['hint'][0])
-        plt.imshow(img)
-        plt.show()
+        img.save(f"hint_{i}.jpg")
+        # plt.imshow(img)
+        # plt.show()
 
-        break
+        i += 1
