@@ -274,114 +274,119 @@ class SizeClusterInpaintDataset(Dataset):
 
         return source, target, source_guide, avail_mask
 
+    def _getitem(self, idx):
+        item = self.data[idx]
+
+        source_filename = item['source']
+        target_filename = item['target']
+        if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
+            if self.guide_mask_dir_name:
+                source_guide_filename = os.path.join(self.guide_mask_dir_name, os.path.basename(item['target']))
+            else:
+                source_guide_filename = item['source_guide']
+            if self.inpaint_mode == "random_mask_and_lineart":
+                if self.avail_mask_dir_name:
+                    avail_mask_filename = os.path.join(self.avail_mask_dir_name, os.path.splitext(
+                        os.path.basename(item['target']))[0] + self.avail_mask_file_prefix)
+                else:
+                    avail_mask_filename = item['source_avail_mask']
+        else:
+            source_guide_filename = None
+            avail_mask_filename = None
+        prompt = item['prompt']
+        if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
+            prompt = prompt[prompt.index('1girl'):]
+
+        source = cv2.imread(os.path.join(self.data_root, source_filename))
+
+        h, w, _ = source.shape
+        if self.target_size > h or self.target_size > w:
+            print("this image is too small", source_filename, "width", w, "height", h)
+            raise Exception("this image is too small")
+
+        target = cv2.imread(os.path.join(self.data_root, target_filename))
+
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
+
+        if source_guide_filename:
+            source_guide = cv2.imread(os.path.join(self.data_root, source_guide_filename))
+            source_guide = cv2.cvtColor(source_guide, cv2.COLOR_BGR2RGB)
+        else:
+            source_guide = None
+
+        if avail_mask_filename:
+            avail_mask = cv2.imread(os.path.join(self.data_root, avail_mask_filename))
+            avail_mask = cv2.cvtColor(avail_mask, cv2.COLOR_BGR2RGB)
+        else:
+            avail_mask = None
+
+        try:
+            source, target, source_guide, avail_mask = self.resize_image(source, target, source_guide, avail_mask)
+        except Exception as e:
+            print("error file path", source_filename, target_filename, source_guide_filename)
+            traceback.print_exc()
+            raise Exception("error file path")
+
+        if self.use_transform:
+            if self.inpaint_mode == "reverse_face_mask_and_lineart":
+                transformed = self.transform(image=target, mask=source, mask1=source_guide)
+                target, source, source_guide = transformed['image'], transformed['mask'], transformed['mask1']
+            elif self.inpaint_mode == "random_mask_and_lineart":
+                transformed = self.transform(image=target, mask=source, mask1=source_guide, mask2=avail_mask)
+                target, source, source_guide, avail_mask = transformed['image'], transformed['mask'], transformed[
+                    'mask1'], transformed['mask2']
+            else:
+                transformed = self.transform(image=target, mask=source)
+                target, source = transformed['image'], transformed['mask']
+
+        # Normalize source images to [0, 1].
+        source = source.astype(np.float32) / 255.0
+        if self.inpaint_mode == "reverse_face_mask_and_lineart":
+            source_guide = source_guide.astype(np.float32) / 255.0
+        elif self.inpaint_mode == "random_mask_and_lineart":
+            source_guide = source_guide.astype(np.float32) / 255.0
+            avail_mask = avail_mask.astype(np.float32) / 255.0
+
+        # Normalize tarƒet images to [-1, 1].
+        target = (target.astype(np.float32) / 127.5) - 1.0
+
+        # deep copy target
+        inpaint_source = copy.deepcopy(target)
+
+        if self.inpaint_mode == "reverse_face_mask_and_lineart":
+            inpaint_source[source > 0.5] = -1.0
+            inpaint_source[source_guide > 0.5] = 1.0
+        elif self.inpaint_mode == "random_mask_and_lineart":
+            num_try = 0
+            is_failed = False
+            while True:
+                masks = self.get_random_mask(source, source_guide, avail_mask)
+                if masks is not False:
+                    break
+                num_try += 1
+                if num_try > 5:
+                    print("generating random mask failed")
+                    is_failed = True
+                    break
+            if is_failed:
+                raise Exception("generating random mask failed")
+            rand_mask, rand_guide_mask = masks
+            inpaint_source[rand_mask > 0.5] = -1.0
+            inpaint_source[rand_guide_mask > 0.5] = 1.0
+        elif self.inpaint_mode == "reverse_face_mask":
+            inpaint_source[source > 0.5] = -1.0
+
+        return dict(jpg=target, txt=prompt, hint=inpaint_source)
+
     def __getitem__(self, idx):
         while True:
-            item = self.data[idx]
-
-            source_filename = item['source']
-            target_filename = item['target']
-            if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
-                if self.guide_mask_dir_name:
-                    source_guide_filename = os.path.join(self.guide_mask_dir_name, os.path.basename(item['target']))
-                else:
-                    source_guide_filename = item['source_guide']
-                if self.inpaint_mode == "random_mask_and_lineart":
-                    if self.avail_mask_dir_name:
-                        avail_mask_filename = os.path.join(self.avail_mask_dir_name, os.path.splitext(
-                            os.path.basename(item['target']))[0] + self.avail_mask_file_prefix)
-                    else:
-                        avail_mask_filename = item['source_avail_mask']
-            else:
-                source_guide_filename = None
-                avail_mask_filename = None
-            prompt = item['prompt']
-            if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
-                prompt = prompt[prompt.index('1girl'):]
-
-            source = cv2.imread(os.path.join(self.data_root, source_filename))
-
-            h, w, _ = source.shape
-            if self.target_size > h or self.target_size > w:
-                idx = random.randint(0, len(self.data) - 1)
-                print("this image is too small", source_filename, "width", w, "height", h)
-                continue
-
-            target = cv2.imread(os.path.join(self.data_root, target_filename))
-
-            source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
-            target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
-
-            if source_guide_filename:
-                source_guide = cv2.imread(os.path.join(self.data_root, source_guide_filename))
-                source_guide = cv2.cvtColor(source_guide, cv2.COLOR_BGR2RGB)
-            else:
-                source_guide = None
-
-            if avail_mask_filename:
-                avail_mask = cv2.imread(os.path.join(self.data_root, avail_mask_filename))
-                avail_mask = cv2.cvtColor(avail_mask, cv2.COLOR_BGR2RGB)
-            else:
-                avail_mask = None
-
             try:
-                source, target, source_guide, avail_mask = self.resize_image(source, target, source_guide, avail_mask)
+                return self._getitem(idx)
             except Exception as e:
-                print("error file path", source_filename, target_filename, source_guide_filename)
+                print("error idx", idx)
                 traceback.print_exc()
                 idx = random.randint(0, len(self.data) - 1)
-                continue
-
-            if self.use_transform:
-                if self.inpaint_mode == "reverse_face_mask_and_lineart":
-                    transformed = self.transform(image=target, mask=source, mask1=source_guide)
-                    target, source, source_guide = transformed['image'], transformed['mask'], transformed['mask1']
-                elif self.inpaint_mode == "random_mask_and_lineart":
-                    transformed = self.transform(image=target, mask=source, mask1=source_guide, mask2=avail_mask)
-                    target, source, source_guide, avail_mask = transformed['image'], transformed['mask'], transformed[
-                        'mask1'], transformed['mask2']
-                else:
-                    transformed = self.transform(image=target, mask=source)
-                    target, source = transformed['image'], transformed['mask']
-
-            # Normalize source images to [0, 1].
-            source = source.astype(np.float32) / 255.0
-            if self.inpaint_mode == "reverse_face_mask_and_lineart":
-                source_guide = source_guide.astype(np.float32) / 255.0
-            elif self.inpaint_mode == "random_mask_and_lineart":
-                source_guide = source_guide.astype(np.float32) / 255.0
-                avail_mask = avail_mask.astype(np.float32) / 255.0
-
-            # Normalize tarƒet images to [-1, 1].
-            target = (target.astype(np.float32) / 127.5) - 1.0
-
-            # deep copy target
-            inpaint_source = copy.deepcopy(target)
-
-            if self.inpaint_mode == "reverse_face_mask_and_lineart":
-                inpaint_source[source > 0.5] = -1.0
-                inpaint_source[source_guide > 0.5] = 1.0
-            elif self.inpaint_mode == "random_mask_and_lineart":
-                num_try = 0
-                is_failed = False
-                while True:
-                    masks = self.get_random_mask(source, source_guide, avail_mask)
-                    if masks is not False:
-                        break
-                    num_try += 1
-                    if num_try > 5:
-                        print("generating random mask failed")
-                        idx = random.randint(0, len(self.data) - 1)
-                        is_failed = True
-                        break
-                if is_failed:
-                    continue
-                rand_mask, rand_guide_mask = masks
-                inpaint_source[rand_mask > 0.5] = -1.0
-                inpaint_source[rand_guide_mask > 0.5] = 1.0
-            elif self.inpaint_mode == "reverse_face_mask":
-                inpaint_source[source > 0.5] = -1.0
-
-            return dict(jpg=target, txt=prompt, hint=inpaint_source)
 
 
 class InpaintDataset(Dataset):
