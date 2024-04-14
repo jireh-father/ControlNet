@@ -370,17 +370,30 @@ class SizeClusterInpaintDataset(Dataset):
 
         target = cv2.imread(os.path.join(self.data_root, target_filename))
 
+        target_h, target_w, _ = target.shape
+        if h != target_h or w != target_w:
+            print("source and target size mismatch", source_filename, target_filename)
+            raise Exception("source and target size mismatch")
+
         source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
         target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
 
         if source_guide_filename:
             source_guide = cv2.imread(os.path.join(self.data_root, source_guide_filename))
+            source_guide_h, source_guide_w, _ = source_guide.shape
+            if h != source_guide_h or w != source_guide_w:
+                print("source and source_guide size mismatch", source_filename, source_guide_filename)
+                raise Exception("source and source_guide size mismatch")
             source_guide = cv2.cvtColor(source_guide, cv2.COLOR_BGR2RGB)
         else:
             source_guide = None
 
         if avail_mask_filename:
             avail_mask = cv2.imread(os.path.join(self.data_root, avail_mask_filename))
+            avail_mask_h, avail_mask_w, _ = avail_mask.shape
+            if h != avail_mask_h or w != avail_mask_w:
+                print("source and avail_mask size mismatch", source_filename, avail_mask_filename)
+                raise Exception("source and avail_mask size mismatch")
             avail_mask = cv2.cvtColor(avail_mask, cv2.COLOR_BGR2RGB)
         else:
             avail_mask = None
@@ -440,6 +453,14 @@ class SizeClusterInpaintDataset(Dataset):
             inpaint_source[rand_guide_mask > 0.5] = 1.0
         elif self.inpaint_mode == "reverse_face_mask":
             inpaint_source[source > 0.5] = -1.0
+
+        if h != target.shape[0] or w != target.shape[1]:
+            print("size mismatch", source_filename, target_filename)
+            raise Exception("size mismatch")
+
+        if h != inpaint_source.shape[0] or w != inpaint_source.shape[1]:
+            print("size mismatch", source_filename, target_filename)
+            raise Exception("size mismatch")
 
         return dict(jpg=target, txt=prompt, hint=inpaint_source)
 
