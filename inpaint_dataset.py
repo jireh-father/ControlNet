@@ -151,7 +151,7 @@ class SizeClusterInpaintDataset(Dataset):
         # print("height_axis", height_axis.shape)
 
         y_indexes = np.where(height_axis > 0)
-        if y_indexes is None or not y_indexes:
+        if y_indexes is None or not y_indexes or len(y_indexes) == 0:
             return False
         # print(y_indexes)
         y = np.max(y_indexes)
