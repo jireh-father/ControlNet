@@ -154,7 +154,11 @@ class SizeClusterInpaintDataset(Dataset):
         if y_indexes is None or not y_indexes or len(y_indexes) == 0:
             return False
         # print(y_indexes)
-        y = np.max(y_indexes)
+        try:
+            y = np.max(y_indexes)
+        except Exception as e:
+            print("error y_indexes", y_indexes)
+            return False
         # print("Y", y)
         # print("height", rand_mask.shape[0])
         if y < rand_mask.shape[0] * 0.8 and random.random() < self.use_long_hair_mask_prob:
