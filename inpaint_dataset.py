@@ -405,7 +405,14 @@ class SizeClusterInpaintDataset(Dataset):
             traceback.print_exc()
             raise Exception("error file path")
 
+        target_h, target_w = self.calc_divisible_size(source)
+
         source_h, source_w, _ = source.shape
+
+        if target_h != source_h or target_w != source_w:
+            print("size mismatch", source_filename, target_filename)
+            raise Exception("size mismatch")
+
         if source_h != target.shape[0] or source_w != target.shape[1]:
             print("size mismatch", source_filename, target_filename)
             raise Exception("size mismatch")
