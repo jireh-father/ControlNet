@@ -405,6 +405,19 @@ class SizeClusterInpaintDataset(Dataset):
             traceback.print_exc()
             raise Exception("error file path")
 
+        source_h, source_w, _ = source.shape
+        if source_h != target.shape[0] or source_w != target.shape[1]:
+            print("size mismatch", source_filename, target_filename)
+            raise Exception("size mismatch")
+
+        if source_guide is not None and (source_h != source_guide.shape[0] or source_w != source_guide.shape[1]):
+            print("size mismatch", source_filename, source_guide_filename)
+            raise Exception("size mismatch")
+
+        if avail_mask is not None and (source_h != avail_mask.shape[0] or source_w != avail_mask.shape[1]):
+            print("size mismatch", source_filename, avail_mask_filename)
+            raise Exception("size mismatch")
+
         if self.use_transform:
             if self.inpaint_mode == "reverse_face_mask_and_lineart":
                 transformed = self.transform(image=target, mask=source, mask1=source_guide)
@@ -454,11 +467,11 @@ class SizeClusterInpaintDataset(Dataset):
         elif self.inpaint_mode == "reverse_face_mask":
             inpaint_source[source > 0.5] = -1.0
 
-        if h != target.shape[0] or w != target.shape[1]:
+        if source_h != target.shape[0] or source_w != target.shape[1]:
             print("size mismatch", source_filename, target_filename)
             raise Exception("size mismatch")
 
-        if h != inpaint_source.shape[0] or w != inpaint_source.shape[1]:
+        if source_h != inpaint_source.shape[0] or source_w != inpaint_source.shape[1]:
             print("size mismatch", source_filename, target_filename)
             raise Exception("size mismatch")
 
