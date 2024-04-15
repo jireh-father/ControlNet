@@ -94,10 +94,12 @@ class SizeClusterInpaintDataset(Dataset):
         self.use_transform = use_transform
         self.cluster_indices = []
         self.make_cluster_indices(label_path)
+        self.current_cluster_key = None
         self.inpaint_mode = inpaint_mode
         self.mask_dilation_range = (min_mask_dilation_range, max_mask_dilation_range)
         self.use_hair_mask_prob = use_hair_mask_prob
         self.use_bottom_hair_prob = use_bottom_hair_prob
+        self.cluster_dict = None
 
     def __len__(self):
         return len(self.data)
@@ -249,6 +251,7 @@ class SizeClusterInpaintDataset(Dataset):
         print("skip", num_skip, "images")
         print("data", len(self.data))
         self.cluster_indices = list(cluster_dict.values())
+        self.cluster_dict = cluster_dict
 
     def calc_divisible_size(self, source):
         h, w, _ = source.shape
@@ -363,6 +366,9 @@ class SizeClusterInpaintDataset(Dataset):
 
         source = cv2.imread(os.path.join(self.data_root, source_filename))
 
+        cluster_height, cluster_width = self.calc_divisible_size(source)
+        self.current_cluster_key = (cluster_height, cluster_width)
+
         h, w, _ = source.shape
         if self.target_size > h or self.target_size > w:
             print("this image is too small", source_filename, "width", w, "height", h)
@@ -405,11 +411,9 @@ class SizeClusterInpaintDataset(Dataset):
             traceback.print_exc()
             raise Exception("error file path")
 
-        target_h, target_w = self.calc_divisible_size(source)
-
         source_h, source_w, _ = source.shape
 
-        if target_h != source_h or target_w != source_w:
+        if cluster_height != source_h or cluster_width != source_w:
             print("size mismatch", source_filename, target_filename)
             raise Exception("size mismatch")
 
@@ -491,7 +495,8 @@ class SizeClusterInpaintDataset(Dataset):
             except Exception as e:
                 print("error idx", idx)
                 traceback.print_exc()
-                idx = random.randint(0, len(self.data) - 1)
+                cluster_idxes = self.cluster_dict[self.current_cluster_key]
+                idx = random.choice(cluster_idxes)
 
 
 class InpaintDataset(Dataset):
@@ -608,6 +613,7 @@ class InpaintDataset(Dataset):
             item = self.data[idx]
 
             source_filename = item['source']
+
             target_filename = item['target']
             prompt = item['prompt']
 
