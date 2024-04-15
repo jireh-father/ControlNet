@@ -93,13 +93,14 @@ class SizeClusterInpaintDataset(Dataset):
 
         self.use_transform = use_transform
         self.cluster_indices = []
+        self.cluster_dict = None
         self.make_cluster_indices(label_path)
         self.current_cluster_key = None
         self.inpaint_mode = inpaint_mode
         self.mask_dilation_range = (min_mask_dilation_range, max_mask_dilation_range)
         self.use_hair_mask_prob = use_hair_mask_prob
         self.use_bottom_hair_prob = use_bottom_hair_prob
-        self.cluster_dict = None
+
 
     def __len__(self):
         return len(self.data)
