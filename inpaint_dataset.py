@@ -346,6 +346,8 @@ class SizeClusterInpaintDataset(Dataset):
 
         source_filename = item['source']
         target_filename = item['target']
+        source_guide_filename = None
+        avail_mask_filename = None
         if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
             if self.guide_mask_dir_name:
                 source_guide_filename = os.path.join(self.guide_mask_dir_name, os.path.basename(item['target']))
@@ -358,9 +360,7 @@ class SizeClusterInpaintDataset(Dataset):
                 else:
                     avail_mask_filename = item['source_avail_mask']
                 # --inpaint_mode random_mask_and_lineart --guide_mask_dir_name hair_lineart_mask &
-        else:
-            source_guide_filename = None
-            avail_mask_filename = None
+
         prompt = item['prompt']
         if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
             prompt = prompt[prompt.index('1girl'):]
