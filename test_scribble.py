@@ -1,25 +1,15 @@
-from share import *
-import config
 
 import cv2
-import einops
-import gradio as gr
-import numpy as np
 import torch
-import random
 
-from pytorch_lightning import seed_everything
 from annotator.util import resize_image, HWC3
 from annotator.hed import HEDdetector, nms
-from cldm.model import create_model, load_state_dict
-from cldm.ddim_hacked import DDIMSampler
 from annotator.canny import CannyDetector
 from annotator.mlsd import MLSDdetector
 from annotator.hed import HEDdetector
 apply_hed = HEDdetector()
 apply_canny = CannyDetector()
 apply_mlsd = MLSDdetector()
-apply_hed = HEDdetector()
 
 # model = create_model('./models/cldm_v15.yaml').cpu()
 # model.load_state_dict(load_state_dict('./models/control_sd15_scribble.pth', location='cuda'))
