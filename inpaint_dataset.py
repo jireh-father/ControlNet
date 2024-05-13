@@ -529,6 +529,9 @@ class SizeClusterInpaintDataset(Dataset):
                 transformed = self.transform(image=target, mask=source, mask1=source_guide, mask2=avail_mask)
                 target, source, source_guide, avail_mask = transformed['image'], transformed['mask'], transformed[
                     'mask1'], transformed['mask2']
+            elif self.inpaint_mode == "random_mask":
+                transformed = self.transform(image=target, mask=source, mask1=avail_mask)
+                target, source, avail_mask = transformed['image'], transformed['mask'], transformed['mask1']
             else:
                 transformed = self.transform(image=target, mask=source)
                 target, source = transformed['image'], transformed['mask']
@@ -583,7 +586,7 @@ class SizeClusterInpaintDataset(Dataset):
                     break
             if is_failed:
                 raise Exception("generating random mask failed")
-            rand_mask, _ = masks
+            rand_mask = masks
             inpaint_source[rand_mask > 0.5] = -1.0
 
         if source_h != target.shape[0] or source_w != target.shape[1]:
@@ -777,7 +780,7 @@ if __name__ == '__main__':
                                         max_size=768, inpaint_mode='random_mask',  # use_hair_mask_prob=0.,
                                         avail_mask_dir_name='reverse_face_mask_source',
                                         avail_mask_file_prefix='_reverse_face_mask_00001_.png',
-                                        # use_long_hair_mask_prob=1.0,
+                                        use_long_hair_mask_prob=0.5,
                                         # use_bottom_hair_prob=1.0
                                         )
     # dataset = InpaintDataset(data_root='E:/dataset/fill50k',
@@ -797,29 +800,30 @@ if __name__ == '__main__':
         pin_memory=False,
         drop_last=False)
     i = 0
-    for batch in dataloader:
-        print(batch['jpg'].shape, batch['txt'], batch['hint'].shape)
-        # convert to pil image
-        from PIL import Image
-        import matplotlib.pyplot as plt
+    for idx in range(10):
+        for batch in dataloader:
+            print(batch['jpg'].shape, batch['txt'], batch['hint'].shape)
+            # convert to pil image
+            from PIL import Image
+            import matplotlib.pyplot as plt
 
 
-        # unnormalize to 0~255
-        def to_pil(x):
-            # x = x.squeeze(0).permute(1, 2, 0).cpu().numpy()
-            x = x.squeeze(0).cpu().numpy()
-            x = (x + 1) / 2 * 255
-            x = x.clip(0, 255).astype(np.uint8)
-            return Image.fromarray(x)
+            # unnormalize to 0~255
+            def to_pil(x):
+                # x = x.squeeze(0).permute(1, 2, 0).cpu().numpy()
+                x = x.squeeze(0).cpu().numpy()
+                x = (x + 1) / 2 * 255
+                x = x.clip(0, 255).astype(np.uint8)
+                return Image.fromarray(x)
 
 
-        print(batch['jpg'].max(), batch['jpg'].min())
-        # img = to_pil(batch['jpg'][0])
-        # plt.imshow(img)
-        # plt.show()
-        img = to_pil(batch['hint'][0])
-        img.save(f"hint_{i}.jpg")
-        # plt.imshow(img)
-        # plt.show()
+            print(batch['jpg'].max(), batch['jpg'].min())
+            # img = to_pil(batch['jpg'][0])
+            # plt.imshow(img)
+            # plt.show()
+            img = to_pil(batch['hint'][0])
+            img.save(f"hint_{i}_{idx}.jpg")
+            # plt.imshow(img)
+            # plt.show()
 
-        i += 1
+            i += 1
