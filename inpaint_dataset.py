@@ -90,6 +90,8 @@ class SizeClusterInpaintDataset(Dataset):
             self.transform = albu.Compose(transform_list, additional_targets={'mask1': 'mask'})
         elif inpaint_mode == "random_mask_and_lineart":
             self.transform = albu.Compose(transform_list, additional_targets={'mask1': 'mask', 'mask2': 'mask'})
+        elif inpaint_mode == "random_mask":
+            self.transform = albu.Compose(transform_list, additional_targets={'mask1': 'mask'})
 
         self.use_transform = use_transform
         self.cluster_indices = []
@@ -101,11 +103,10 @@ class SizeClusterInpaintDataset(Dataset):
         self.use_hair_mask_prob = use_hair_mask_prob
         self.use_bottom_hair_prob = use_bottom_hair_prob
 
-
     def __len__(self):
         return len(self.data)
 
-    def get_random_mask(self, hair_mask, guide_mask, avail_mask):
+    def get_random_mask_for_hair(self, hair_mask, guide_mask, avail_mask):
         if random.random() < self.use_hair_mask_prob:
             rand_mask = hair_mask.copy()
         else:
@@ -210,6 +211,90 @@ class SizeClusterInpaintDataset(Dataset):
         # cv2.waitKey(0)
 
         return rand_mask, rand_guide_mask
+
+    def get_random_mask_except_face(self, hair_mask, avail_mask):
+        # draw and fill random ellipse as white color
+        ellipse_image = np.zeros(avail_mask.shape[:2], dtype=np.uint8)
+        center_x = random.randint(0, avail_mask.shape[1])
+        center_y = random.randint(0, avail_mask.shape[0])
+        axes_x = random.randint(1, avail_mask.shape[1] // 2)
+        axes_y = random.randint(1, avail_mask.shape[0] // 2)
+        angle = random.randint(0, 360)
+        color = 255
+        thickness = -1
+        cv2.ellipse(ellipse_image, (center_x, center_y), (axes_x, axes_y), angle, 0, 360, color, thickness)
+        # cv2.imshow("random mask", ellipse_image)
+        # cv2.waitKey(0)
+        # cv2.imshow("hair mask", hair_mask)
+        # cv2.waitKey(0)
+
+        rand_mask = cv2.bitwise_and(hair_mask, hair_mask, mask=ellipse_image)
+        # cv2.imshow("rand mask", rand_mask)
+        # cv2.waitKey(0)
+        # check mask empty
+        if rand_mask.max() == 0:
+            return False
+
+        dilation = random.randint(self.mask_dilation_range[0], self.mask_dilation_range[1])
+        rand_mask = cv2.dilate(rand_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilation, dilation)))
+
+        # get highest y coordinate of mask when pixel > 0
+        # print("rand_mask shape", rand_mask.shape)
+
+        # extract height axis
+        height_axis = np.sum(rand_mask, axis=1)
+        height_axis = np.sum(height_axis, axis=1)
+        # print("height_axis", height_axis.shape)
+
+        y_indexes = np.where(height_axis > 0)
+        if y_indexes is None or not y_indexes or len(y_indexes) == 0:
+            return False
+        # print(y_indexes)
+        try:
+            y = np.max(y_indexes)
+        except Exception as e:
+            print("error y_indexes", y_indexes)
+            return False
+        # print("Y", y)
+        # print("height", rand_mask.shape[0])
+        if y < rand_mask.shape[0] * 0.8 and random.random() < self.use_long_hair_mask_prob:
+            margin = int((rand_mask.shape[0] - y) * 0.1)
+            target_y = y + random.randint(margin, min(rand_mask.shape[0] - y - 1 + margin, rand_mask.shape[0] - 1))
+            clone_rand_mask = rand_mask.copy()
+            # shift clone_rand_mask to target_y by window sliding 3pixels
+            # cv2.imshow("1", clone_rand_mask)
+            for idx in range(5, target_y - y, 5):
+                tmp_rand_mask = clone_rand_mask.copy()
+                tmp_rand_mask = np.roll(tmp_rand_mask, idx, axis=0)
+                tmp_rand_mask[:idx] = 0
+                # dilate
+                tmp_prob = random.random()
+                if tmp_prob < 0.3:
+                    tmp_dilation = random.randint(1, 5)
+                    tmp_rand_mask = cv2.dilate(tmp_rand_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
+                                                                                        (tmp_dilation, tmp_dilation)))
+                elif tmp_prob < 0.6:
+                    tmp_shift = random.randint(-5, 5)
+                    tmp_rand_mask = np.roll(tmp_rand_mask, tmp_shift, axis=1)
+
+                rand_mask = cv2.bitwise_or(rand_mask, tmp_rand_mask)
+            # merge clone_rand_mask and rand_mask
+            # cv2.imshow("3", rand_mask)
+
+        # cv2.imshow("guide_mask", guide_mask)
+        # cv2.waitKey(0)
+        # cv2.imshow("rand guide mask", rand_guide_mask)
+        # cv2.waitKey(0)
+        # cv2.imshow("rand mask", rand_mask)
+        # cv2.waitKey(0)
+
+        rand_mask[avail_mask < 1] = 0
+        if rand_mask.max() == 0:
+            return False
+        # cv2.imshow("last", rand_mask)
+        # cv2.waitKey(0)
+
+        return rand_mask
 
     def make_cluster_indices(self, label_path):
         cluster_dict = {}
@@ -360,6 +445,12 @@ class SizeClusterInpaintDataset(Dataset):
                 else:
                     avail_mask_filename = item['source_avail_mask']
                 # --inpaint_mode random_mask_and_lineart --guide_mask_dir_name hair_lineart_mask &
+        elif self.inpaint_mode == "random_mask":
+            if self.avail_mask_dir_name:
+                avail_mask_filename = os.path.join(self.avail_mask_dir_name, os.path.splitext(
+                    os.path.basename(item['target']))[0] + self.avail_mask_file_prefix)
+            else:
+                avail_mask_filename = item['source_avail_mask']
 
         prompt = item['prompt']
         if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
@@ -463,7 +554,7 @@ class SizeClusterInpaintDataset(Dataset):
             num_try = 0
             is_failed = False
             while True:
-                masks = self.get_random_mask(source, source_guide, avail_mask)
+                masks = self.get_random_mask_for_hair(source, source_guide, avail_mask)
                 if masks is not False:
                     break
                 num_try += 1
@@ -478,6 +569,22 @@ class SizeClusterInpaintDataset(Dataset):
             inpaint_source[rand_guide_mask > 0.5] = 1.0
         elif self.inpaint_mode == "reverse_face_mask":
             inpaint_source[source > 0.5] = -1.0
+        elif self.inpaint_mode == "random_mask":
+            num_try = 0
+            is_failed = False
+            while True:
+                masks = self.get_random_mask_except_face(source, avail_mask)
+                if masks is not False:
+                    break
+                num_try += 1
+                if num_try > 5:
+                    print("generating random mask failed")
+                    is_failed = True
+                    break
+            if is_failed:
+                raise Exception("generating random mask failed")
+            rand_mask, _ = masks
+            inpaint_source[rand_mask > 0.5] = -1.0
 
         if source_h != target.shape[0] or source_w != target.shape[1]:
             print("size mismatch", source_filename, target_filename)
@@ -666,7 +773,8 @@ if __name__ == '__main__':
                                         "D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/exact_hair_mask_prompt.json",
                                         guide_mask_dir_name="D:\dataset\hair_style\hairshop_sample_from_gisu\controlnet/hair_lineart_mask",
                                         target_size=512, divisible_by=64, use_transform=False,
-                                        max_size=768, inpaint_mode='random_mask_and_lineart',  # use_hair_mask_prob=0.,
+                                        # max_size=768, inpaint_mode='random_mask_and_lineart',  # use_hair_mask_prob=0.,
+                                        max_size=768, inpaint_mode='random_mask',  # use_hair_mask_prob=0.,
                                         avail_mask_dir_name='reverse_face_mask_source',
                                         avail_mask_file_prefix='_reverse_face_mask_00001_.png',
                                         # use_long_hair_mask_prob=1.0,
