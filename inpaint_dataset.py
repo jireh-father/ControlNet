@@ -453,7 +453,7 @@ class SizeClusterInpaintDataset(Dataset):
                 avail_mask_filename = item['source_avail_mask']
 
         prompt = item['prompt']
-        if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart":
+        if self.inpaint_mode == "reverse_face_mask_and_lineart" or self.inpaint_mode == "random_mask_and_lineart" or self.inpaint_mode == "random_mask":
             prompt = prompt[prompt.index('1girl'):]
 
         source = cv2.imread(os.path.join(self.data_root, source_filename))
