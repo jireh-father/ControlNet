@@ -66,7 +66,9 @@ class SizeClusterInpaintDataset(Dataset):
                  max_mask_dilation_range=70,
                  use_hair_mask_prob=0.3,
                  use_long_hair_mask_prob=0.3,
-                 use_bottom_hair_prob=0.2
+                 use_bottom_hair_prob=0.2,
+                 another_source_prob=0.5,
+                 another_source_key_postfix='_over_eyes',
                  ):
         self.data = []
         self.data_root = data_root
@@ -77,6 +79,8 @@ class SizeClusterInpaintDataset(Dataset):
         self.avail_mask_dir_name = avail_mask_dir_name
         self.avail_mask_file_prefix = avail_mask_file_prefix
         self.use_long_hair_mask_prob = use_long_hair_mask_prob
+        self.another_source_prob = another_source_prob
+        self.another_source_key_postfix = another_source_key_postfix
 
         transform_list = [
             albu.HorizontalFlip(p=0.5),
@@ -429,7 +433,10 @@ class SizeClusterInpaintDataset(Dataset):
     def _getitem(self, idx):
         item = self.data[idx]
 
-        source_filename = item['source']
+        if self.another_source_prob > 0 and random.random() < self.another_source_prob:
+            source_filename = item['source' + self.another_source_key_postfix]
+        else:
+            source_filename = item['source']
         target_filename = item['target']
         source_guide_filename = None
         avail_mask_filename = None

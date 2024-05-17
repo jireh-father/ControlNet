@@ -46,6 +46,8 @@ def main(args):
                                             min_mask_dilation_range=args.min_mask_dilation_range,
                                             max_mask_dilation_range=args.max_mask_dilation_range,
                                             use_bottom_hair_prob=args.use_bottom_hair_prob,
+                                            another_source_prob=args.another_source_prob,
+                                            another_source_key_postfix=args.another_source_key_postfix,
                                             )
 
         sampler = ClusterRandomSampler(dataset, args.batch_size, True)
@@ -131,6 +133,10 @@ if __name__ == '__main__':
     parser.add_argument('--min_mask_dilation_range', type=int, default=1)
     # max_mask_dilation_range
     parser.add_argument('--max_mask_dilation_range', type=int, default=70)
+    # another_source_prob
+    parser.add_argument('--another_source_prob', type=float, default=None)
+    # another_source_key_postfix
+    parser.add_argument('--another_source_key_postfix', type=str, default='_over_eyes')
 
     args = parser.parse_args()
     main(args)
