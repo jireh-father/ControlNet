@@ -138,8 +138,9 @@ def main(args):
                 human_label_dict[fname] = item['prompt']
     pseudo_label_dict = {}
     for col in hair_tag_cols:
-        pseudo_label_dict[col] = json.load(
-            open(os.path.join(args.pseudo_label_dir, f'infer_{col}.json'), 'r', encoding='utf-8'))
+        if os.path.exists(os.path.join(args.pseudo_label_dir, f'infer_{col}.json')):
+            pseudo_label_dict[col] = json.load(
+                open(os.path.join(args.pseudo_label_dir, f'infer_{col}.json'), 'r', encoding='utf-8'))
     num_hit = 0
     with open(args.src_label_path, 'r', encoding='utf-8') as f:
         for line in f:
