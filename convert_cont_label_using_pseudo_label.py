@@ -16,14 +16,113 @@ hair_tag_cols = [
 
 label_map = {
     'hair_style_name': ['build perm', 'hippie perm', 'hug perm', 'hush cut', 'layered cut', 'short cut', 'slick cut',
-                        'tassel cut'],
+                        'tassel cut', 'wave perm'],
     'hair_length': ['bob hair', 'long hair', 'medium hair', 'short hair'],
     'curl_type': ['cs-curl perm', 'inner c-curl perm', 'no-curl', 'outer c-curl perm', 's-curl perm',
-                  'twist curl perm'],
+                  'twist curl perm', 'wave curl'],
     'curl_width': ['thick curl', 'thin curl'],
     'bangs': ['faceline bangs', 'full bangs', 'see-through bangs', 'side bangs'],
     'cut': ['layered hair', 'no-layered hair'],
     'hair_thickness': ['thick hair', 'thin hair'],
+}
+
+hair_structure = {
+    'build perm': {
+        'long hair': [
+            'cs-curl perm',
+            's-curl perm',
+        ],
+        'medium hair': [
+            'cs-curl perm',
+        ]
+    },
+    'hippie perm': {
+        'long hair': [
+            'twist curl perm',
+        ],
+        'medium hair': [
+            'twist curl perm',
+        ],
+        'bob hair': [
+            'twist curl perm',
+        ]
+    },
+    'hug perm': {
+        'long hair': [
+            'inner c-curl perm',
+        ],
+        'medium hair': [
+            'inner c-curl perm',
+        ],
+        'bob hair': [
+            'inner c-curl perm',
+        ]
+    },
+    'hush cut': {
+        'long hair': [
+            'no-curl',
+            'cs-curl perm',
+            'inner c-curl perm',
+        ],
+        'medium hair': [
+            'no-curl',
+            'cs-curl perm',
+            'inner c-curl perm',
+        ],
+        'bob hair': [
+            'no-curl',
+        ]
+    },
+    'layered cut': {
+        'long hair': [
+            'no-curl',
+            'cs-curl perm',
+            'inner c-curl perm',
+            's-curl perm',
+        ],
+        'medium hair': [
+            'no-curl',
+            'cs-curl perm',
+            'inner c-curl perm',
+            'outer c-curl perm',
+            's-curl perm',
+        ],
+        'bob hair': [
+            'no-curl',
+            'inner c-curl perm',
+        ]
+    },
+    'short cut': {
+        'short hair': [
+            'no-curl',
+            'inner c-curl perm',
+            's-curl perm',
+        ],
+    },
+    'slick cut': {
+        'long hair': [
+            'no-curl',
+        ],
+        'medium hair': [
+            'no-curl',
+        ],
+    },
+    'tassel cut': {
+        'bob hair': [
+            'no-curl',
+        ]
+    },
+    'wave perm': {
+        'long hair': [
+            'wave curl',
+        ],
+        'medium hair': [
+            'wave curl',
+        ],
+        'bob hair': [
+            'wave curl',
+        ]
+    },
 }
 
 
@@ -54,15 +153,32 @@ def main(args):
             else:
                 prompt = item['prompt']
                 new_prompt = []
+                prompt_dict = {}
                 for col in pseudo_label_dict:
                     label_idx = pseudo_label_dict[col][file_name]['index']
                     score = pseudo_label_dict[col][file_name]['prob']
                     if score < args.score_thr:
                         continue
+                    prompt_dict[col] = label_map[col][label_idx]
                     new_prompt.append(label_map[col][label_idx])
 
                 if not new_prompt:
                     continue
+
+                if args.use_hair_structure:
+                    str_new_prompt = []
+                    if 'hair_style_name' in prompt_dict:
+                        str_new_prompt.append(prompt_dict['hair_style_name'])
+                        if 'hair_length' in prompt_dict and prompt_dict['hair_style_name'] in hair_structure and \
+                                prompt_dict['hair_length'] in hair_structure[prompt_dict['hair_style_name']]:
+                            str_new_prompt.append(prompt_dict['hair_length'])
+                            if 'curl_type' in prompt_dict and prompt_dict['curl_type'] in hair_structure[prompt_dict['hair_style_name']][prompt_dict['hair_length']]:
+                                str_new_prompt.append(prompt_dict['curl_type'])
+                        else:
+                            pass
+                    if not str_new_prompt:
+                        continue
+                    new_prompt = str_new_prompt
 
                 prompt = prompt[prompt.index('1girl'):]
                 new_prompt = ', '.join(new_prompt)
@@ -91,5 +207,7 @@ if __name__ == '__main__':
     parser.add_argument('--score_thr', type=float, default=0.7)
     # mask_file_prefix
     parser.add_argument('--mask_file_name_prefix', type=str, default='_reverse_face_mask')
+    # use_hair_structure
+    parser.add_argument('--use_hair_structure', action='store_true', default=False)
 
     main(parser.parse_args())
