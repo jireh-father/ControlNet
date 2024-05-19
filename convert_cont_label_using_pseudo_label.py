@@ -142,6 +142,7 @@ def main(args):
             pseudo_label_dict[col] = json.load(
                 open(os.path.join(args.pseudo_label_dir, f'infer_{col}.json'), 'r', encoding='utf-8'))
     num_hit = 0
+    result_dict = {}
     with open(args.src_label_path, 'r', encoding='utf-8') as f:
         for line in f:
             item = json.loads(line)
@@ -173,7 +174,8 @@ def main(args):
                         if 'hair_length' in prompt_dict and prompt_dict['hair_style_name'] in hair_structure and \
                                 prompt_dict['hair_length'] in hair_structure[prompt_dict['hair_style_name']]:
                             str_new_prompt.append(prompt_dict['hair_length'])
-                            if 'curl_type' in prompt_dict and prompt_dict['curl_type'] in hair_structure[prompt_dict['hair_style_name']][prompt_dict['hair_length']]:
+                            if 'curl_type' in prompt_dict and prompt_dict['curl_type'] in \
+                                    hair_structure[prompt_dict['hair_style_name']][prompt_dict['hair_length']]:
                                 str_new_prompt.append(prompt_dict['curl_type'])
                         else:
                             pass
@@ -186,6 +188,9 @@ def main(args):
                 prompt = prompt[prompt.index('1girl'):]
                 new_prompt = ', '.join(new_prompt)
                 prompt = f"{new_prompt}, {prompt}"
+            result_dict[os.path.splitext(os.path.basename(item["target"]))[0]] = {
+                "tags": prompt,
+            }
             output_file.write(
                 json.dumps(
                     {"source": item["source"], "target": item["target"], "prompt": prompt},
@@ -193,6 +198,7 @@ def main(args):
                 + "\n")
 
     output_file.close()
+    json.dump(result_dict, open(args.kohya_output_label_path, 'w+', encoding='utf-8'), ensure_ascii=False, indent=4)
     print(f"hit {num_hit} human label")
     print("done")
 
@@ -206,6 +212,7 @@ if __name__ == '__main__':
     # human_label_path
     parser.add_argument('--human_label_path', type=str, default='./data/human_label')
     parser.add_argument('--output_label_path', type=str, default='./data/output')
+    parser.add_argument('--kohya_output_label_path', type=str, default='./data/output')
     # score_thr
     parser.add_argument('--score_thr', type=float, default=0.7)
     # mask_file_prefix
