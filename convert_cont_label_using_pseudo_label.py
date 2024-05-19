@@ -177,6 +177,8 @@ def main(args):
                                 str_new_prompt.append(prompt_dict['curl_type'])
                         else:
                             pass
+                    if 'bangs' in prompt_dict:
+                        str_new_prompt.append(prompt_dict['bangs'])
                     if not str_new_prompt:
                         continue
                     new_prompt = str_new_prompt
