@@ -11,7 +11,8 @@ import albumentations as albu
 from inpaint_dataset import SizeClusterInpaintDataset
 
 class SizeClusterContDataset(SizeClusterInpaintDataset):
-    def __init__(self, data_root, label_path, target_size=512, divisible_by=64, use_transform=False, max_size=768):
+    def __init__(self, data_root, label_path, target_size=512, divisible_by=64, use_transform=False, max_size=768, source_invert=False):
+        self.source_invert = source_invert
         super().__init__(data_root=data_root, label_path=label_path, target_size=target_size, divisible_by=divisible_by, use_transform=use_transform, max_size=max_size)
 
     def __len__(self):
@@ -62,6 +63,9 @@ class SizeClusterContDataset(SizeClusterInpaintDataset):
         if source_h != target.shape[0] or source_w != target.shape[1]:
             print("size mismatch", source_filename, target_filename)
             raise Exception("size mismatch")
+
+        if self.source_invert:
+            source = 255 - source
 
         if self.use_transform:
             transformed = self.transform(image=target, mask=source)
