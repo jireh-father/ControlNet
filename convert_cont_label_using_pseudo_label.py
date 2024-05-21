@@ -26,6 +26,22 @@ label_map = {
     'hair_thickness': ['thick hair', 'thin hair'],
 }
 
+ban_hair_attrs = {
+    'build perm': ['short hair', 'no-curl', 'twist curl perm', 'wave curl'],
+    'hippie perm': ['no-curl', 'cs-curl perm', 'inner c-curl perm', 'outer c-curl perm', 's-curl perm'],
+    'hug perm': ['short hair', 'no-curl', 'cs-curl perm', 's-curl perm', 'twist curl perm', 'wave curl',
+                 'outer c-curl perm'],
+    'hush cut': ['short hair', 'twist curl perm', 'wave curl'],
+    'layered cut': ['twist curl perm', 'wave curl'],
+    'short cut': ['long hair', 'medium hair', 'bob hair'],
+    'slick cut': ['inner c-curl perm', 'outer c-curl perm', 's-curl perm', 'twist curl perm', 'wave curl',
+                  'cs-curl perm', 'short hair', 'bob hair'],
+    'tassel cut': ['long hair', 'medium hair', 'short hair', 'inner c-curl perm', 'outer c-curl perm', 's-curl perm',
+                   'twist curl perm', 'wave curl', 'cs-curl perm'],
+    'wave perm': ['no-curl', 'cs-curl perm', 'inner c-curl perm', 'outer c-curl perm', 's-curl perm',],
+
+}
+
 hair_structure = {
     'build perm': {
         'long hair': [
@@ -123,6 +139,10 @@ hair_structure = {
             'wave curl',
         ]
     },
+    'bob hair': [
+        'inner c-curl perm',
+        'outer c-curl perm',
+    ]
 }
 
 
@@ -166,6 +186,12 @@ def main(args):
 
                 if not new_prompt:
                     continue
+
+                if args.use_ban_hair_style_attr and 'hair_style_name' in prompt_dict:
+                    hair_style_name = prompt_dict['hair_style_name']
+                    for bag_tag in ban_hair_attrs[hair_style_name]:
+                        if bag_tag in new_prompt:
+                            new_prompt.remove(bag_tag)
 
                 if args.use_hair_structure:
                     str_new_prompt = []
@@ -219,5 +245,7 @@ if __name__ == '__main__':
     parser.add_argument('--mask_file_name_prefix', type=str, default='_reverse_face_mask')
     # use_hair_structure
     parser.add_argument('--use_hair_structure', action='store_true', default=False)
+    # use_ban_hair_style_attr
+    parser.add_argument('--use_ban_hair_style_attr', action='store_true', default=False)
 
     main(parser.parse_args())
