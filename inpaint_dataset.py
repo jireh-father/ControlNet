@@ -433,7 +433,7 @@ class SizeClusterInpaintDataset(Dataset):
     def _getitem(self, idx):
         item = self.data[idx]
 
-        if self.another_source_prob > 0 and random.random() < self.another_source_prob:
+        if self.another_source_prob and random.random() < self.another_source_prob:
             source_filename = item['source' + self.another_source_key_postfix]
         else:
             source_filename = item['source']
