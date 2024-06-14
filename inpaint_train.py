@@ -48,6 +48,7 @@ def main(args):
                                             use_bottom_hair_prob=args.use_bottom_hair_prob,
                                             another_source_prob=args.another_source_prob,
                                             another_source_key_postfix=args.another_source_key_postfix,
+                                            hori_flip_prob=args.hori_flip_prob
                                             )
 
         sampler = ClusterRandomSampler(dataset, args.batch_size, True)
@@ -137,6 +138,8 @@ if __name__ == '__main__':
     parser.add_argument('--another_source_prob', type=float, default=None)
     # another_source_key_postfix
     parser.add_argument('--another_source_key_postfix', type=str, default='_over_eyes')
+    # hori_flip_prob
+    parser.add_argument('--hori_flip_prob', type=float, default=0.5)
 
     args = parser.parse_args()
     main(args)

@@ -69,6 +69,7 @@ class SizeClusterInpaintDataset(Dataset):
                  use_bottom_hair_prob=0.2,
                  another_source_prob=0.5,
                  another_source_key_postfix='_over_eyes',
+                 hori_flip_prob=0.5
                  ):
         self.data = []
         self.data_root = data_root
@@ -83,7 +84,7 @@ class SizeClusterInpaintDataset(Dataset):
         self.another_source_key_postfix = another_source_key_postfix
 
         transform_list = [
-            albu.HorizontalFlip(p=0.5),
+            albu.HorizontalFlip(p=hori_flip_prob),
             # albu.RandomBrightnessContrast(p=0.5, brightness_limit=(-0.1,0.02), contrast_limit=0.2),
             # albu.HueSaturationValue(p=0.5, hue_shift_limit=0, sat_shift_limit=25, val_shift_limit=15),
             # albu.RandomGamma(p=0.5, gamma_limit=(100, 120)),
