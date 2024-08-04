@@ -11,9 +11,9 @@ import albumentations as albu
 from inpaint_dataset import SizeClusterInpaintDataset
 
 class SizeClusterContDataset(SizeClusterInpaintDataset):
-    def __init__(self, data_root, label_path, target_size=512, divisible_by=64, use_transform=False, max_size=768, source_invert=False):
+    def __init__(self, data_root, label_path, target_size=512, divisible_by=64, use_transform=False, max_size=768, source_invert=False, hori_flip_prob=0.5):
         self.source_invert = source_invert
-        super().__init__(data_root=data_root, label_path=label_path, target_size=target_size, divisible_by=divisible_by, use_transform=use_transform, max_size=max_size)
+        super().__init__(data_root=data_root, label_path=label_path, target_size=target_size, divisible_by=divisible_by, use_transform=use_transform, max_size=max_size, hori_flip_prob=hori_flip_prob)
 
     def __len__(self):
         return len(self.data)

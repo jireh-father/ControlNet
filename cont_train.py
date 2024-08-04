@@ -38,6 +38,7 @@ def main(args):
                                      use_transform=args.use_transform,
                                      max_size=args.input_max_size,
                                      source_invert=args.source_invert,
+                                     hori_flip_prob=args.hori_flip_prob
                                      )
 
     sampler = ClusterRandomSampler(dataset, args.batch_size, True)
@@ -99,7 +100,8 @@ if __name__ == '__main__':
     parser.add_argument('--input_max_size', type=int, default=768)
     # source_invert
     parser.add_argument('--source_invert', action='store_true', default=False)
-    # inpaint_mode
+    # hori_flip_prob
+    parser.add_argument('--hori_flip_prob', type=float, default=0.5)
 
     args = parser.parse_args()
     main(args)
