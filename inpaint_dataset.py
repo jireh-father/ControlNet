@@ -304,6 +304,7 @@ class SizeClusterInpaintDataset(Dataset):
     def make_cluster_indices(self, label_path):
         cluster_dict = {}
         num_skip = 0
+        print("make cluster indices", label_path)
         with open(label_path, 'rt', encoding='utf-8') as f:
             for line in f:
                 item = json.loads(line)
