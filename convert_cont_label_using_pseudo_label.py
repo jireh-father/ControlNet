@@ -7,11 +7,11 @@ hair_tag_cols = [
     'hair_style_name',
     'hair_length',
     'curl_type',
-    'curl_width',
+    # 'curl_width',
     'bangs',
     # 'parting',
-    'cut',
-    'hair_thickness',
+    # 'cut',
+    # 'hair_thickness',
 ]
 
 label_map = {
@@ -20,10 +20,10 @@ label_map = {
     'hair_length': ['bob hair', 'long hair', 'medium hair', 'short hair'],
     'curl_type': ['cs-curl perm', 'inner c-curl perm', 'no-curl', 'outer c-curl perm', 's-curl perm',
                   'twist curl perm', 'wave curl'],
-    'curl_width': ['thick curl', 'thin curl'],
+    # 'curl_width': ['thick curl', 'thin curl'],
     'bangs': ['faceline bangs', 'full bangs', 'see-through bangs', 'side bangs'],
-    'cut': ['layered hair', 'no-layered hair'],
-    'hair_thickness': ['thick hair', 'thin hair'],
+    # 'cut': ['layered hair', 'no-layered hair'],
+    # 'hair_thickness': ['thick hair', 'thin hair'],
 }
 
 ban_hair_attrs = {
