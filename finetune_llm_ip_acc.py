@@ -54,7 +54,7 @@ def main(args):
         pin_memory=False,
         drop_last=False)
 
-    optimizer = torch.optim.Adam(model.parameters())
+    optimizer = model.configure_optimizers()
 
     model, optimizer, dataloader = accelerator.prepare(model, optimizer, dataloader)
 
