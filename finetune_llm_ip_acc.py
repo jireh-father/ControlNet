@@ -20,13 +20,13 @@ def main(args):
     )
 
 
-    weight_dtype = torch.float32
-    if args.mixed_precision == "fp16":
-        weight_dtype = torch.float16
-        os.environ["ATTN_PRECISION"] = "fp16"
-    elif args.mixed_precision == "bf16":
-        weight_dtype = torch.bfloat16
-        os.environ["ATTN_PRECISION"] = "bf16"
+    # weight_dtype = torch.float32
+    # if args.mixed_precision == "fp16":
+    #     weight_dtype = torch.float16
+    #     os.environ["ATTN_PRECISION"] = "fp16"
+    # elif args.mixed_precision == "bf16":
+    #     weight_dtype = torch.bfloat16
+    #     os.environ["ATTN_PRECISION"] = "bf16"
 
     # First use cpu to load models. Pytorch Lightning will automatically move it to GPUs.
     model = create_model(args.model_config).cpu()
@@ -34,7 +34,7 @@ def main(args):
     model.learning_rate = args.learning_rate
     model.sd_locked = sd_locked
     model.only_mid_control = only_mid_control
-    model.to(accelerator.device, dtype=weight_dtype)
+    model.to(accelerator.device)#, dtype=weight_dtype)
 
 
     # Misc
