@@ -90,7 +90,7 @@ def main(args):
             accelerator.backward(loss)
 
             optimizer.step()
-            print(f'Epoch: {epoch}, Step: {step}, Loss: {loss.item()}')
+            # print(f'Epoch: {epoch}, Step: {step}, Loss: {loss.item()}')
 
             current_loss = loss.detach().item()
 
