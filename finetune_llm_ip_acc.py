@@ -79,6 +79,11 @@ def main(args):
 
     model.train()
     for epoch in range(args.max_epochs):
+        if args.save_init_model and epoch == 0:
+            if accelerator.is_main_process:
+                torch.save(accelerator.unwrap_model(model).state_dict(), os.path.join(args.default_root_dir, "init.ckpt"))
+                print("Init model saved")
+
         epoch += 1
         loss_total = 0
         for step, batch in enumerate(dataloader):
@@ -109,10 +114,16 @@ def main(args):
             if accelerator.is_main_process:
                 #save model every n epochs
                 if epoch % args.save_every_n_epochs == 0:
-                    model.save_weights(os.path.join(args.default_root_dir, f"epoch_{epoch}.ckpt"))
+                    torch.save(accelerator.unwrap_model(model).state_dict(), os.path.join(args.default_root_dir, f"epoch_{epoch}.ckpt"))
+                    print(f"Model saved at epoch {epoch}")
 
-        if accelerator.is_main_process:
-            model.save_weights(os.path.join(args.default_root_dir, "final.ckpt"))
+    accelerator.end_training()
+    if accelerator.is_main_process:
+        torch.save(accelerator.unwrap_model(model).state_dict(), os.path.join(args.default_root_dir, "final.ckpt"))
+        print("Training finished")
+
+    del accelerator
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train the model')
@@ -146,6 +157,8 @@ if __name__ == '__main__':
     parser.add_argument('--input_target_size', type=int, default=512)
     # use_multi_aspect_ratio
     parser.add_argument('--use_multi_aspect_ratio', action='store_true', default=False)
+    # save init model
+    parser.add_argument('--save_init_model', action='store_true', default=False)
 
     parser.add_argument('--divisible_by', type=int, default=None)
     # use_transform
