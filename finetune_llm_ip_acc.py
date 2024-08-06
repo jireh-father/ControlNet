@@ -10,6 +10,7 @@ from accelerate import Accelerator
 import os
 from tqdm import tqdm
 
+
 def main(args):
     sd_locked = True
     only_mid_control = False
@@ -18,7 +19,6 @@ def main(args):
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         mixed_precision=args.mixed_precision,
     )
-
 
     # weight_dtype = torch.float32
     # if args.mixed_precision == "fp16":
@@ -34,8 +34,7 @@ def main(args):
     model.learning_rate = args.learning_rate
     model.sd_locked = sd_locked
     model.only_mid_control = only_mid_control
-    model.to(accelerator.device)#, dtype=weight_dtype)
-
+    model.to(accelerator.device)  # , dtype=weight_dtype)
 
     # Misc
     dataset = SizeClusterInpaintDataset(args.data_root, args.label_path, target_size=args.input_target_size,
@@ -78,10 +77,12 @@ def main(args):
     model, optimizer, dataloader = accelerator.prepare(model, optimizer, dataloader)
 
     model.train()
+    os.makedirs(args.default_root_dir, exist_ok=True)
     for epoch in range(args.max_epochs):
         if args.save_init_model and epoch == 0:
             if accelerator.is_main_process:
-                torch.save(accelerator.unwrap_model(model).state_dict(), os.path.join(args.default_root_dir, "init.ckpt"))
+                torch.save(accelerator.unwrap_model(model).state_dict(),
+                           os.path.join(args.default_root_dir, "init.ckpt"))
                 print("Init model saved")
 
         epoch += 1
@@ -107,14 +108,14 @@ def main(args):
 
             progress_bar.set_postfix(**logs)
 
-
         accelerator.wait_for_everyone()
 
         if args.save_every_n_epochs is not None:
             if accelerator.is_main_process:
-                #save model every n epochs
+                # save model every n epochs
                 if epoch % args.save_every_n_epochs == 0:
-                    torch.save(accelerator.unwrap_model(model).state_dict(), os.path.join(args.default_root_dir, f"epoch_{epoch}.ckpt"))
+                    torch.save(accelerator.unwrap_model(model).state_dict(),
+                               os.path.join(args.default_root_dir, f"epoch_{epoch}.ckpt"))
                     print(f"Model saved at epoch {epoch}")
 
     accelerator.end_training()
@@ -144,9 +145,9 @@ if __name__ == '__main__':
     # logger_freq
     parser.add_argument('--logger_freq', type=int, default=300)
     # mixed_precision
-    parser.add_argument('--mixed_precision', type=str, default='fp16') #float, fp16
+    parser.add_argument('--mixed_precision', type=str, default='fp16')  # float, fp16
     # learning_rate
-    parser.add_argument('--learning_rate', type=float, default=1e-5)#1e-05
+    parser.add_argument('--learning_rate', type=float, default=1e-5)  # 1e-05
     # default_root_dir
     parser.add_argument('--default_root_dir', type=str, default='./logs')
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
@@ -165,8 +166,9 @@ if __name__ == '__main__':
     parser.add_argument('--use_transform', action='store_true', default=False)
     # input_max_size
     parser.add_argument('--input_max_size', type=int, default=768)
-    #inpaint_mode
-    parser.add_argument('--inpaint_mode', type=str, default='reverse_face_mask') # reverse_face_mask, reverse_face_mask_and_lineart, random_mask_and_lineart
+    # inpaint_mode
+    parser.add_argument('--inpaint_mode', type=str,
+                        default='reverse_face_mask')  # reverse_face_mask, reverse_face_mask_and_lineart, random_mask_and_lineart
     # avail_mask_dir_name
     parser.add_argument('--avail_mask_dir_name', type=str, default='reverse_face_mask_source')
     # avail_mask_file_prefix
