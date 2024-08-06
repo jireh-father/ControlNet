@@ -128,7 +128,7 @@ class FrozenCLIPEmbedder(AbstractEncoder):
         return z
 
     def encode(self, text):
-        return self(text)
+        return self(text.to(self.device, torch.float16))
 
 
 class FrozenOpenCLIPEmbedder(AbstractEncoder):
