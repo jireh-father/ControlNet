@@ -1,3 +1,5 @@
+import math
+
 from torch.utils.data import DataLoader
 from inpaint_dataset import SizeClusterInpaintDataset, ClusterRandomSampler
 from cldm.model import create_model, load_state_dict
@@ -6,6 +8,7 @@ import torch
 import torch.nn.functional as F
 from accelerate import Accelerator
 import os
+from tqdm import tqdm
 
 def main(args):
     sd_locked = True
@@ -15,6 +18,7 @@ def main(args):
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         mixed_precision=args.mixed_precision,
     )
+
 
     weight_dtype = torch.float32
     if args.mixed_precision == "fp16":
@@ -63,6 +67,12 @@ def main(args):
         pin_memory=False,
         drop_last=False)
 
+    max_train_steps = args.max_train_epochs * math.ceil(
+        len(dataloader) / accelerator.num_processes / args.gradient_accumulation_steps
+    )
+    progress_bar = tqdm(range(max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process,
+                        desc="steps")
+
     optimizer = model.configure_optimizers()
 
     model, optimizer, dataloader = accelerator.prepare(model, optimizer, dataloader)
@@ -70,6 +80,7 @@ def main(args):
     model.train()
     for epoch in range(args.max_epochs):
         epoch += 1
+        loss_total = 0
         for step, batch in enumerate(dataloader):
             optimizer.zero_grad()
             model.on_train_batch_start(batch, step, 0)
@@ -81,6 +92,27 @@ def main(args):
             optimizer.step()
             print(f'Epoch: {epoch}, Step: {step}, Loss: {loss.item()}')
 
+            current_loss = loss.detach().item()
+
+            if accelerator.sync_gradients:
+                progress_bar.update(1)
+
+            loss_total += current_loss
+            avr_loss = loss_total / (step + 1)
+            logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
+
+            progress_bar.set_postfix(**logs)
+
+        accelerator.wait_for_everyone()
+
+        if args.save_every_n_epochs is not None:
+            if accelerator.is_main_process:
+                #save model every n epochs
+                if epoch % args.save_every_n_epochs == 0:
+                    model.save_weights(os.path.join(args.default_root_dir, f"epoch_{epoch}.ckpt"))
+
+        if accelerator.is_main_process:
+            model.save_weights(os.path.join(args.default_root_dir, "final.ckpt"))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train the model')
@@ -92,6 +124,8 @@ if __name__ == '__main__':
     # batch_size
     parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--num_workers', type=int, default=4)
+    # save_every_n_epochs
+    parser.add_argument('--save_every_n_epochs', type=int, default=1)
     # save_top_k
     parser.add_argument('--save_top_k', type=int, default=10)
     # max_epochs
