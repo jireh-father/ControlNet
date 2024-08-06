@@ -22,6 +22,8 @@ def main(args):
         # mixed_precision=args.mixed_precision,
         kwargs_handlers=[ddp_kwargs]
     )
+    print(accelerator.num_processes)
+    sys.exit()
 
     # weight_dtype = torch.float32
     # if args.mixed_precision == "fp16":
