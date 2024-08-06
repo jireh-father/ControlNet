@@ -9,15 +9,18 @@ import torch.nn.functional as F
 from accelerate import Accelerator
 import os
 from tqdm import tqdm
-
+from accelerate import DistributedDataParallelKwargs
 
 def main(args):
     sd_locked = True
     only_mid_control = False
 
+    ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
+
     accelerator = Accelerator(
         gradient_accumulation_steps=args.gradient_accumulation_steps,
-        mixed_precision=args.mixed_precision,
+        # mixed_precision=args.mixed_precision,
+        kwargs_handlers=[ddp_kwargs]
     )
 
     # weight_dtype = torch.float32
