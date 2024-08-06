@@ -420,6 +420,9 @@ class ControlLDM(LatentDiffusion):
             params += list(self.model.diffusion_model.output_blocks.parameters())
             params += list(self.model.diffusion_model.out.parameters())
         opt = torch.optim.AdamW(params, lr=lr)
+
+        import bitsandbytes as bnb
+        opt = bnb.optim.AdamW8bit(params, lr=lr)
         # if self.use_scheduler:
         #     assert 'target' in self.scheduler_config
         #     scheduler = instantiate_from_config(self.scheduler_config)

@@ -5,14 +5,24 @@ import argparse
 import torch
 import torch.nn.functional as F
 from accelerate import Accelerator
-
-
+import os
 
 def main(args):
     sd_locked = True
     only_mid_control = False
 
-    accelerator = Accelerator()
+    accelerator = Accelerator(
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        mixed_precision=args.mixed_precision,
+    )
+
+    weight_dtype = torch.float32
+    if args.mixed_precision == "fp16":
+        weight_dtype = torch.float16
+        os.environ["ATTN_PRECISION"] = "fp16"
+    elif args.mixed_precision == "bf16":
+        weight_dtype = torch.bfloat16
+        os.environ["ATTN_PRECISION"] = "bf16"
 
     # First use cpu to load models. Pytorch Lightning will automatically move it to GPUs.
     model = create_model(args.model_config).cpu()
@@ -20,8 +30,7 @@ def main(args):
     model.learning_rate = args.learning_rate
     model.sd_locked = sd_locked
     model.only_mid_control = only_mid_control
-
-
+    model.to(accelerator.device, dtype=weight_dtype)
 
 
     # Misc
@@ -85,16 +94,17 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=4)
     # save_top_k
     parser.add_argument('--save_top_k', type=int, default=10)
-    parser.add_argument('--precision', type=int, default=16)
     # max_epochs
     parser.add_argument('--max_epochs', type=int, default=10)
     # logger_freq
     parser.add_argument('--logger_freq', type=int, default=300)
+    # mixed_precision
+    parser.add_argument('--mixed_precision', type=str, default='fp16') #float, fp16
     # learning_rate
-    parser.add_argument('--learning_rate', type=float, default=1e-5)
+    parser.add_argument('--learning_rate', type=float, default=1e-5)#1e-05
     # default_root_dir
     parser.add_argument('--default_root_dir', type=str, default='./logs')
-    parser.add_argument('--accumulate_grad_batches', type=int, default=1)
+    parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
     # auto_lr_find
     parser.add_argument('--auto_lr_find', action='store_true', default=False)
 
@@ -130,6 +140,5 @@ if __name__ == '__main__':
     parser.add_argument('--another_source_key_postfix', type=str, default='_over_eyes')
     # hori_flip_prob
     parser.add_argument('--hori_flip_prob', type=float, default=0.5)
-
     args = parser.parse_args()
     main(args)
