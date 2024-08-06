@@ -67,7 +67,7 @@ def main(args):
         pin_memory=False,
         drop_last=False)
 
-    max_train_steps = args.max_train_epochs * math.ceil(
+    max_train_steps = args.max_epochs * math.ceil(
         len(dataloader) / accelerator.num_processes / args.gradient_accumulation_steps
     )
     progress_bar = tqdm(range(max_train_steps), smoothing=0, disable=not accelerator.is_local_main_process,
