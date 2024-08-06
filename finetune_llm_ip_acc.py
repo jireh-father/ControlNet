@@ -88,14 +88,12 @@ def main(args):
         loss_total = 0
         for step, batch in enumerate(dataloader):
             with accelerator.accumulate():
-                optimizer.zero_grad()
-
                 loss, _ = model(batch)
 
                 accelerator.backward(loss)
 
                 optimizer.step()
-                optimizer.zero_grad(set_to_none=True)
+                optimizer.zero_grad()
                 # print(f'Epoch: {epoch}, Step: {step}, Loss: {loss.item()}')
 
             if accelerator.sync_gradients:
