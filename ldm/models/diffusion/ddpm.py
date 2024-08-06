@@ -410,7 +410,14 @@ class DDPM(pl.LightningModule):
 
         return loss, loss_dict
 
-    def forward(self, x, *args, **kwargs):
+    # def forward(self, x, *args, **kwargs):
+    #     # b, c, h, w, device, img_size, = *x.shape, x.device, self.image_size
+    #     # assert h == img_size and w == img_size, f'height and width of image must be {img_size}'
+    #     t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()
+    #     return self.p_losses(x, t, *args, **kwargs)
+
+    def forward(self, batch, *args, **kwargs):
+        x = self.get_input(batch, self.first_stage_key)
         # b, c, h, w, device, img_size, = *x.shape, x.device, self.image_size
         # assert h == img_size and w == img_size, f'height and width of image must be {img_size}'
         t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()

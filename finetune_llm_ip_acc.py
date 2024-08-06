@@ -88,9 +88,8 @@ def main(args):
         loss_total = 0
         for step, batch in enumerate(dataloader):
             optimizer.zero_grad()
-            model.on_train_batch_start(batch, step, 0)
-            loss = model.training_step(batch, step)
-            model.on_train_batch_end()
+
+            loss, _ = model(batch)
 
             accelerator.backward(loss)
 
