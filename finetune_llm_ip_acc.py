@@ -87,25 +87,28 @@ def main(args):
         epoch += 1
         loss_total = 0
         for step, batch in enumerate(dataloader):
-            optimizer.zero_grad()
+            with accelerator.accumulate():
+                optimizer.zero_grad()
 
-            loss, _ = model(batch)
+                loss, _ = model(batch)
 
-            accelerator.backward(loss)
+                accelerator.backward(loss)
 
-            optimizer.step()
-            # print(f'Epoch: {epoch}, Step: {step}, Loss: {loss.item()}')
-
-            current_loss = loss.detach().item()
+                optimizer.step()
+                optimizer.zero_grad(set_to_none=True)
+                # print(f'Epoch: {epoch}, Step: {step}, Loss: {loss.item()}')
 
             if accelerator.sync_gradients:
                 progress_bar.update(1)
+
+            current_loss = loss.detach().item()
 
             loss_total += current_loss
             avr_loss = loss_total / (step + 1)
             logs = {"loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
 
             progress_bar.set_postfix(**logs)
+
 
         accelerator.wait_for_everyone()
 
