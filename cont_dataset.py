@@ -77,7 +77,7 @@ class SizeClusterContDataset(SizeClusterInpaintDataset):
         # Normalize target images to [-1, 1].
         target = (target.astype(np.float32) / 127.5) - 1.0
 
-        prompt = prompt[prompt.index('1girl'):]
+        # prompt = prompt[prompt.index('1girl'):]
         prompt_list = prompt.split(', ')
 
         # drop tags 10~80%
