@@ -306,7 +306,9 @@ class SizeClusterInpaintDataset(Dataset):
         num_skip = 0
         print("make cluster indices", label_path)
         with open(label_path, 'rt', encoding='utf-8') as f:
-            for line in f:
+            for line_idx, line in enumerate(f):
+                if line_idx % 1000 == 0:
+                    print("line", line_idx)
                 item = json.loads(line)
 
                 source_filename = item['source']
