@@ -410,7 +410,14 @@ class DDPM(pl.LightningModule):
 
         return loss, loss_dict
 
-    def forward(self, x, *args, **kwargs):
+    # def forward(self, x, *args, **kwargs):
+    #     # b, c, h, w, device, img_size, = *x.shape, x.device, self.image_size
+    #     # assert h == img_size and w == img_size, f'height and width of image must be {img_size}'
+    #     t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()
+    #     return self.p_losses(x, t, *args, **kwargs)
+
+    def forward(self, batch, *args, **kwargs):
+        x = self.get_input(batch, self.first_stage_key)
         # b, c, h, w, device, img_size, = *x.shape, x.device, self.image_size
         # assert h == img_size and w == img_size, f'height and width of image must be {img_size}'
         t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()
@@ -836,7 +843,8 @@ class LatentDiffusion(DDPM):
         loss = self(x, c)
         return loss
 
-    def forward(self, x, c, *args, **kwargs):
+    def forward(self, batch, *args, **kwargs):
+        x, c = self.get_input(batch, self.first_stage_key)
         t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()
         if self.model.conditioning_key is not None:
             assert c is not None
@@ -846,6 +854,17 @@ class LatentDiffusion(DDPM):
                 tc = self.cond_ids[t].to(self.device)
                 c = self.q_sample(x_start=c, t=tc, noise=torch.randn_like(c.float()))
         return self.p_losses(x, c, t, *args, **kwargs)
+
+    # def forward(self, x, c, *args, **kwargs):
+    #     t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()
+    #     if self.model.conditioning_key is not None:
+    #         assert c is not None
+    #         if self.cond_stage_trainable:
+    #             c = self.get_learned_conditioning(c)
+    #         if self.shorten_cond_schedule:  # TODO: drop this option
+    #             tc = self.cond_ids[t].to(self.device)
+    #             c = self.q_sample(x_start=c, t=tc, noise=torch.randn_like(c.float()))
+    #     return self.p_losses(x, c, t, *args, **kwargs)
 
     def apply_model(self, x_noisy, t, cond, return_ids=False):
         if isinstance(cond, dict):
