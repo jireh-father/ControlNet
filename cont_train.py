@@ -26,6 +26,7 @@ def main(args):
     if args.every_n_train_steps:
         checkpoint_callback = ModelCheckpoint(
             every_n_train_steps=args.every_n_train_steps,
+            save_top_k=args.save_top_k,
             save_weights_only=True,
             monitor="global_step",
             # mode="max",
@@ -35,6 +36,7 @@ def main(args):
     elif args.every_n_epochs:
         checkpoint_callback = ModelCheckpoint(
             every_n_epochs=args.every_n_epochs,
+            save_top_k=args.save_top_k,
             save_weights_only=True,
             monitor="global_step",
             dirpath=args.default_root_dir,
