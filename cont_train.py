@@ -23,14 +23,32 @@ def main(args):
     model.sd_locked = sd_locked
     model.only_mid_control = only_mid_control
 
-    checkpoint_callback = ModelCheckpoint(
-        save_top_k=args.save_top_k,
-        save_weights_only=True,
-        monitor="global_step",
-        mode="max",
-        dirpath=args.default_root_dir,
-        filename=os.path.basename(args.default_root_dir) + "-model-{epoch:02d}-{global_step}",
-    )
+    if args.every_n_train_steps:
+        checkpoint_callback = ModelCheckpoint(
+            every_n_train_steps=args.every_n_train_steps,
+            save_weights_only=True,
+            monitor="global_step",
+            # mode="max",
+            dirpath=args.default_root_dir,
+            filename=os.path.basename(args.default_root_dir) + "-model-{epoch:02d}-{global_step}",
+        )
+    elif args.every_n_epochs:
+        checkpoint_callback = ModelCheckpoint(
+            every_n_epochs=args.every_n_epochs,
+            save_weights_only=True,
+            monitor="global_step",
+            dirpath=args.default_root_dir,
+            filename=os.path.basename(args.default_root_dir) + "-model-{epoch:02d}-{global_step}",
+        )
+    else:
+        checkpoint_callback = ModelCheckpoint(
+            save_top_k=args.save_top_k,
+            save_weights_only=True,
+            monitor="global_step",
+            mode="max",
+            dirpath=args.default_root_dir,
+            filename=os.path.basename(args.default_root_dir) + "-model-{epoch:02d}-{global_step}",
+        )
 
     # Misc
     dataset = SizeClusterContDataset(args.data_root, args.label_path, target_size=args.input_target_size,
@@ -102,6 +120,12 @@ if __name__ == '__main__':
     parser.add_argument('--source_invert', action='store_true', default=False)
     # hori_flip_prob
     parser.add_argument('--hori_flip_prob', type=float, default=0.5)
+
+    # every_n_train_steps
+    parser.add_argument('--every_n_train_steps', type=int, default=None)
+
+    # every_n_epochs
+    parser.add_argument('--every_n_epochs', type=int, default=None)
 
     args = parser.parse_args()
     main(args)
